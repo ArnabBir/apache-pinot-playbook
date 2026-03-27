@@ -1,0 +1,112 @@
+{
+  "schemaName": "trip_events",
+  "enableColumnBasedNullHandling": true,
+  "dimensionFieldSpecs": [
+    {
+      "name": "trip_id",
+      "dataType": "STRING"
+    },
+    {
+      "name": "merchant_id",
+      "dataType": "STRING"
+    },
+    {
+      "name": "merchant_name",
+      "dataType": "STRING"
+    },
+    {
+      "name": "driver_id",
+      "dataType": "STRING"
+    },
+    {
+      "name": "rider_id",
+      "dataType": "STRING"
+    },
+    {
+      "name": "city",
+      "dataType": "STRING"
+    },
+    {
+      "name": "service_tier",
+      "dataType": "STRING"
+    },
+    {
+      "name": "event_type",
+      "dataType": "STRING"
+    },
+    {
+      "name": "status",
+      "dataType": "STRING"
+    },
+    {
+      "name": "payment_method",
+      "dataType": "STRING"
+    },
+    {
+      "name": "event_day",
+      "dataType": "STRING"
+    },
+    {
+      "name": "event_hour",
+      "dataType": "INT"
+    },
+    {
+      "name": "event_minute_bucket_ms",
+      "dataType": "LONG"
+    },
+    {
+      "name": "trip_partition",
+      "dataType": "INT"
+    },
+    {
+      "name": "pickup_zone",
+      "dataType": "STRING"
+    },
+    {
+      "name": "dropoff_zone",
+      "dataType": "STRING"
+    },
+    {
+      "name": "pickup_h3",
+      "dataType": "STRING"
+    },
+    {
+      "name": "dropoff_h3",
+      "dataType": "STRING"
+    },
+    {
+      "name": "event_version",
+      "dataType": "INT"
+    },
+    {
+      "name": "is_deleted",
+      "dataType": "BOOLEAN"
+    }
+  ],
+  "metricFieldSpecs": [
+    {
+      "name": "fare_amount",
+      "dataType": "DOUBLE"
+    },
+    {
+      "name": "distance_km",
+      "dataType": "DOUBLE"
+    },
+    {
+      "name": "eta_seconds",
+      "dataType": "INT"
+    },
+    {
+      "name": "surge_multiplier",
+      "dataType": "DOUBLE"
+    }
+  ],
+  "dateTimeFieldSpecs": [
+    {
+      "name": "event_time_ms",
+      "dataType": "LONG",
+      "format": "1:MILLISECONDS:EPOCH",
+      "granularity": "1:MILLISECONDS"
+    }
+  ]
+}

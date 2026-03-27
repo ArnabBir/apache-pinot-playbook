@@ -1,0 +1,12 @@
+flowchart TD
+  start[Query shape] --> eq{Equality filters?}
+  eq -->|yes| inverted[Inverted index]
+  eq -->|high selectivity ids| bloom[Bloom filter]
+  start --> range{Range predicates?}
+  range -->|yes| rangeidx[Range index]
+  start --> textq{Prefix / contains text?}
+  textq -->|yes| textidx[Text / FST index]
+  start --> jsonq{JSON path filters?}
+  jsonq -->|yes| jsonidx[JSON index]
+  start --> agg{Repeated group-by aggregates?}
+  agg -->|yes| startree[Star-tree]

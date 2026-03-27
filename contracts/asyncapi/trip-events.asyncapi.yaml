@@ -1,0 +1,137 @@
+asyncapi: 3.0.0
+info:
+  title: Trip Events and Trip State Streams
+  version: 0.1.0
+  description: |
+    AsyncAPI contract for the Kafka topics used by the Apache Pinot playbook demo.
+    The `trip-events` topic models append-only facts; the `trip-state` topic models upsert-friendly latest-state updates keyed by trip_id.
+defaultContentType: application/json
+servers:
+  localKafka:
+    host: localhost:9092
+    protocol: kafka
+    description: Local Docker Compose Kafka broker
+channels:
+  trip-events:
+    address: trip-events
+    messages:
+      tripEvent:
+        $ref: '#/components/messages/TripEvent'
+  trip-state:
+    address: trip-state
+    messages:
+      tripState:
+        $ref: '#/components/messages/TripState'
+operations:
+  publishTripEvents:
+    action: send
+    channel:
+      $ref: '#/channels/trip-events'
+    messages:
+      - $ref: '#/channels/trip-events/messages/tripEvent'
+  publishTripState:
+    action: send
+    channel:
+      $ref: '#/channels/trip-state'
+    messages:
+      - $ref: '#/channels/trip-state/messages/tripState'
+components:
+  messages:
+    TripEvent:
+      name: TripEvent
+      title: Trip event fact
+      summary: An immutable fact record keyed by trip_id.
+      headers:
+        type: object
+        properties:
+          key:
+            type: string
+            description: Kafka message key. Must be set to trip_id.
+      payload:
+        $ref: '#/components/schemas/TripEvent'
+    TripState:
+      name: TripState
+      title: Trip state update
+      summary: Latest-state payload suitable for Pinot FULL upsert.
+      headers:
+        type: object
+        properties:
+          key:
+            type: string
+            description: Kafka message key. Must be set to trip_id.
+      payload:
+        $ref: '#/components/schemas/TripState'
+  schemas:
+    TripEvent:
+      type: object
+      required:
+        - trip_id
+        - merchant_id
+        - merchant_name
+        - city
+        - service_tier
+        - event_type
+        - status
+        - payment_method
+        - event_time_ms
+        - event_version
+      properties:
+        trip_id:
+          type: string
+        merchant_id:
+          type: string
+        merchant_name:
+          type: string
+        city:
+          type: string
+        service_tier:
+          type: string
+        event_type:
+          type: string
+        status:
+          type: string
+        payment_method:
+          type: string
+        event_time_ms:
+          type: integer
+          format: int64
+        event_version:
+          type: integer
+        is_deleted:
+          type: boolean
+        attributes:
+          type: object
+          additionalProperties: true
+    TripState:
+      type: object
+      required:
+        - trip_id
+        - merchant_id
+        - city
+        - status
+        - last_event_type
+        - last_event_time_ms
+        - event_version
+      properties:
+        trip_id:
+          type: string
+        merchant_id:
+          type: string
+        merchant_name:
+          type: string
+        city:
+          type: string
+        status:
+          type: string
+        last_event_type:
+          type: string
+        last_event_time_ms:
+          type: integer
+          format: int64
+        event_version:
+          type: integer
+        is_deleted:
+          type: boolean
+        attributes:
+          type: object
+          additionalProperties: true

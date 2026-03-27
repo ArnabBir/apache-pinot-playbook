@@ -1,0 +1,9 @@
+{
+  "segment_minutes": 60,
+  "total_segments": 506,
+  "scanned_rows_without_pruning": 1611,
+  "scanned_rows_with_time_pruning": 23,
+  "scanned_rows_with_time_and_city_pruning": 13,
+  "time_pruning_gain_pct": 98.57,
+  "full_pruning_gain_pct": 99.19
+}

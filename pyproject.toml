@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "apache-pinot-playbook-demo"
+version = "0.1.0"
+description = "apache Pinot playbook with runnable demo code, contracts, simulations and labs."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+  {name = "OpenAI"}
+]
+license = {text = "Apache-2.0"}
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "requests>=2.32",
+  "PyYAML>=6.0",
+  "jsonschema>=4.21"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "httpx>=0.27"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]

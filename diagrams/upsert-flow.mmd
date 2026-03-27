@@ -1,0 +1,9 @@
+flowchart TD
+  producer[Producer keyed by trip_id] --> kafka[(trip-state)]
+  kafka --> server[Realtime consuming segment]
+  server --> compare{Higher comparisonColumns value?}
+  compare -->|yes| replace[replace latest row]
+  compare -->|no| drop[drop stale row]
+  replace --> snapshot[optional snapshot persistence]
+  replace --> query[query latest state]
+  drop --> metrics[stale row metrics]

@@ -1,0 +1,41 @@
+{
+  "tableName": "merchants_dim",
+  "tableType": "OFFLINE",
+  "segmentsConfig": {
+    "schemaName": "merchants_dim",
+    "replication": "1"
+  },
+  "tenants": {
+    "broker": "DefaultTenant",
+    "server": "DefaultTenant"
+  },
+  "tableIndexConfig": {
+    "loadMode": "MMAP",
+    "sortedColumn": [
+      "merchant_id"
+    ],
+    "invertedIndexColumns": [
+      "city",
+      "vertical",
+      "contract_tier"
+    ],
+    "starTreeIndexConfigs": [
+      {
+        "dimensionsSplitOrder": [
+          "city",
+          "vertical",
+          "contract_tier"
+        ],
+        "functionColumnPairs": [
+          "COUNT__*",
+          "SUM__monthly_orders",
+          "AVG__rating"
+        ],
+        "maxLeafRecords": 10000
+      }
+    ]
+  },
+  "queryConfig": {
+    "timeoutMs": 15000
+  }
+}

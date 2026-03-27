@@ -1,0 +1,5 @@
+{
+  "language": "mytsql",
+  "query": "series(sum(gross_merchandise_value), by=[city], every='5m', window='24h')",
+  "queryOptions": "timeoutMs=15000"
+}

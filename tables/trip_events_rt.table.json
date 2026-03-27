@@ -1,0 +1,71 @@
+{
+  "tableName": "trip_events",
+  "tableType": "REALTIME",
+  "segmentsConfig": {
+    "timeColumnName": "event_time_ms",
+    "schemaName": "trip_events",
+    "replication": "1"
+  },
+  "tenants": {
+    "broker": "DefaultTenant",
+    "server": "DefaultTenant"
+  },
+  "tableIndexConfig": {
+    "loadMode": "MMAP",
+    "invertedIndexColumns": [
+      "city",
+      "service_tier",
+      "event_type",
+      "status",
+      "merchant_id"
+    ],
+    "rangeIndexColumns": [
+      "event_time_ms",
+      "fare_amount",
+      "distance_km"
+    ],
+    "bloomFilterColumns": [
+      "trip_id",
+      "merchant_id",
+      "driver_id"
+    ],
+    "jsonIndexColumns": []
+  },
+  "fieldConfigList": [
+    {
+      "name": "event_time_ms",
+      "encodingType": "RAW",
+      "indexTypes": [
+        "RANGE"
+      ]
+    }
+  ],
+  "quota": {
+    "maxQueriesPerSecond": "200",
+    "storage": "20G"
+  },
+  "routing": {
+    "instanceSelectorType": "balanced"
+  },
+  "queryConfig": {
+    "timeoutMs": 15000
+  },
+  "ingestionConfig": {
+    "continueOnError": false,
+    "streamIngestionConfig": {
+      "streamConfigMaps": [
+        {
+          "streamType": "kafka",
+          "stream.kafka.topic.name": "trip-events",
+          "stream.kafka.broker.list": "kafka:19092",
+          "stream.kafka.consumer.type": "lowlevel",
+          "stream.kafka.consumer.factory.class.name": "org.apache.pinot.plugin.stream.kafka20.KafkaConsumerFactory",
+          "stream.kafka.decoder.class.name": "org.apache.pinot.plugin.inputformat.json.JSONMessageDecoder",
+          "stream.kafka.consumer.prop.auto.offset.reset": "smallest",
+          "realtime.segment.flush.threshold.rows": "50000",
+          "realtime.segment.flush.threshold.time": "1h"
+        }
+      ]
+    }
+  }
+}

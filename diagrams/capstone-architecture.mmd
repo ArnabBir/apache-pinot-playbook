@@ -1,0 +1,14 @@
+flowchart LR
+  users[Mobile apps] --> producer[Order / Trip service]
+  producer --> tripEvents[(trip-events)]
+  producer --> tripState[(trip-state)]
+  producer --> objectStore[(CSV dimension dumps)]
+  tripEvents --> pinotEvents[trip_events RT]
+  tripState --> pinotState[trip_state RT upsert]
+  objectStore --> batchJob[Batch ingestion job]
+  batchJob --> merchants[merchants_dim OFFLINE]
+  pinotEvents --> broker[Pinot Broker]
+  pinotState --> broker
+  merchants --> broker
+  broker --> api[FastAPI analytics service]
+  broker --> bi[Superset / Tableau / notebooks]

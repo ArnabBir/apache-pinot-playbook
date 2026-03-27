@@ -1,0 +1,8 @@
+flowchart TD
+  sql[ANSI SQL] --> planner[Logical Planner]
+  planner --> root[Root Stage]
+  planner --> inter[Intermediate Shuffle Stage]
+  planner --> leaf[Leaf Scan Stages]
+  leaf --> inter
+  inter --> root
+  root --> response[BrokerResponse]

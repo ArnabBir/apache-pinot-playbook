@@ -1,0 +1,37 @@
+merchant_id,merchant_name,city,vertical,contract_tier,rating,is_active,monthly_orders,onboarding_date
+m_001,Spice Route Bengaluru 1,bengaluru,restaurant,platinum,4.47,False,19024,2024-01-01
+m_002,Fresh Cart Mumbai 2,mumbai,grocery,gold,3.99,True,7717,2024-01-08
+m_003,MediSprint Delhi 3,delhi,pharmacy,silver,4.51,True,6697,2024-01-15
+m_004,Volt Vault Hyderabad 4,hyderabad,electronics,launchpad,4.41,False,7140,2024-01-22
+m_005,Thread & Tone Pune 5,pune,fashion,platinum,3.96,True,2739,2024-01-29
+m_006,Tandoor House Chennai 6,chennai,restaurant,gold,4.37,True,46962,2024-02-05
+m_007,Quick Mart Bengaluru 7,bengaluru,grocery,silver,4.35,True,39618,2024-02-12
+m_008,City Rx Mumbai 8,mumbai,pharmacy,launchpad,4.03,True,11463,2024-02-19
+m_009,Circuit Corner Delhi 9,delhi,electronics,platinum,4.54,True,11189,2024-02-26
+m_010,Metro Loom Hyderabad 1,hyderabad,fashion,gold,3.96,True,7698,2024-03-04
+m_011,Urban Tiffin Pune 2,pune,restaurant,silver,3.81,True,23541,2024-03-11
+m_012,Green Crate Chennai 3,chennai,grocery,launchpad,4.42,True,48823,2024-03-18
+m_013,Care Chemist Bengaluru 4,bengaluru,pharmacy,platinum,4.25,True,25807,2024-03-25
+m_014,Nano Plaza Mumbai 5,mumbai,electronics,gold,3.79,True,42198,2024-04-01
+m_015,Label Lane Delhi 6,delhi,fashion,silver,4.44,True,38837,2024-04-08
+m_016,Metro Meals Hyderabad 7,hyderabad,restaurant,launchpad,3.93,True,44336,2024-04-15
+m_017,Daily Basket Pune 8,pune,grocery,platinum,3.97,True,6229,2024-04-22
+m_018,Health Shelf Chennai 9,chennai,pharmacy,gold,4.73,True,25911,2024-04-29
+m_019,Signal Store Bengaluru 1,bengaluru,electronics,silver,4.03,True,24909,2024-05-06
+m_020,Street Stitch Mumbai 2,mumbai,fashion,launchpad,3.9,True,44920,2024-05-13
+m_021,Spice Route Delhi 3,delhi,restaurant,platinum,4.02,True,43469,2024-05-20
+m_022,Fresh Cart Hyderabad 4,hyderabad,grocery,gold,3.79,True,36005,2024-05-27
+m_023,MediSprint Pune 5,pune,pharmacy,silver,4.57,True,25867,2024-06-03
+m_024,Volt Vault Chennai 6,chennai,electronics,launchpad,4.02,True,46099,2024-06-10
+m_025,Thread & Tone Bengaluru 7,bengaluru,fashion,platinum,4.37,True,4665,2024-06-17
+m_026,Tandoor House Mumbai 8,mumbai,restaurant,gold,3.97,False,21673,2024-06-24
+m_027,Quick Mart Delhi 9,delhi,grocery,silver,4.18,True,38170,2024-07-01
+m_028,City Rx Hyderabad 1,hyderabad,pharmacy,launchpad,4.75,True,43954,2024-07-08
+m_029,Circuit Corner Pune 2,pune,electronics,platinum,4.3,True,43129,2024-07-15
+m_030,Metro Loom Chennai 3,chennai,fashion,gold,4.25,True,17162,2024-07-22
+m_031,Urban Tiffin Bengaluru 4,bengaluru,restaurant,silver,4.59,True,49956,2024-07-29
+m_032,Green Crate Mumbai 5,mumbai,grocery,launchpad,4.4,True,27175,2024-08-05
+m_033,Care Chemist Delhi 6,delhi,pharmacy,platinum,4.13,True,10065,2024-08-12
+m_034,Nano Plaza Hyderabad 7,hyderabad,electronics,gold,4.31,True,4087,2024-08-19
+m_035,Label Lane Pune 8,pune,fashion,silver,4.73,True,11484,2024-08-26
+m_036,Metro Meals Chennai 9,chennai,restaurant,launchpad,4.65,True,5163,2024-09-02

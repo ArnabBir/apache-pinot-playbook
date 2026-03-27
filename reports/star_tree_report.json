@@ -1,0 +1,71 @@
+{
+  "dimensions": [
+    "city",
+    "service_tier"
+  ],
+  "raw_rows": 1611,
+  "aggregate_cells": 18,
+  "compression_ratio": 89.5,
+  "top_groups": [
+    [
+      "pune",
+      "economy",
+      214,
+      11141.12
+    ],
+    [
+      "hyderabad",
+      "economy",
+      191,
+      10244.82
+    ],
+    [
+      "chennai",
+      "economy",
+      214,
+      10049.34
+    ],
+    [
+      "delhi",
+      "economy",
+      206,
+      9434.26
+    ],
+    [
+      "bengaluru",
+      "economy",
+      213,
+      8064.12
+    ],
+    [
+      "mumbai",
+      "economy",
+      204,
+      7767.56
+    ],
+    [
+      "delhi",
+      "premium",
+      49,
+      2926.96
+    ],
+    [
+      "chennai",
+      "premium",
+      33,
+      2364.18
+    ],
+    [
+      "mumbai",
+      "xl",
+      29,
+      2145.3
+    ],
+    [
+      "hyderabad",
+      "premium",
+      23,
+      1170.82
+    ]
+  ]
+}

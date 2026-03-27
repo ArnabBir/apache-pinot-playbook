@@ -1,0 +1,30 @@
+{
+  "trip_id": "trip_000001",
+  "merchant_id": "m_001",
+  "merchant_name": "Spice Route Bengaluru 1",
+  "driver_id": "drv_00001",
+  "rider_id": "rdr_00001",
+  "city": "bengaluru",
+  "service_tier": "economy",
+  "event_type": "completed",
+  "status": "completed",
+  "payment_method": "upi",
+  "event_time_ms": 1767225600000,
+  "event_day": "2026-01-01",
+  "event_hour": 10,
+  "event_minute_bucket_ms": 1767225600000,
+  "trip_partition": 5,
+  "pickup_zone": "koramangala",
+  "dropoff_zone": "whitefield",
+  "pickup_h3": "8f6a8b0c0d0e0f",
+  "dropoff_h3": "8f6a8b0c0d0e10",
+  "fare_amount": 187.5,
+  "distance_km": 8.2,
+  "eta_seconds": 900,
+  "surge_multiplier": 1.5,
+  "event_version": 5,
+  "is_deleted": false,
+  "attributes": {
+    "source": "simulator"
+  }
+}

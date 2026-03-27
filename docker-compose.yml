@@ -1,0 +1,87 @@
+services:
+  zookeeper:
+    image: zookeeper:3.9
+    container_name: pinot-zookeeper
+    # Using the official ZooKeeper image; Bitnami-specific environment vars removed
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: pinot-kafka
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: INTERNAL://:19092,EXTERNAL://:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:19092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    ports:
+      - "9092:9092"
+
+  pinot-controller:
+    image: apachepinot/pinot:1.4.0
+    container_name: pinot-controller
+    depends_on:
+      - zookeeper
+    command: ["StartController", "-zkAddress", "zookeeper:2181"]
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./:/workspace
+
+  pinot-broker:
+    image: apachepinot/pinot:1.4.0
+    container_name: pinot-broker
+    depends_on:
+      - pinot-controller
+    command: ["StartBroker", "-zkAddress", "zookeeper:2181"]
+    ports:
+      - "8099:8099"
+    volumes:
+      - ./:/workspace
+
+  pinot-server:
+    image: apachepinot/pinot:1.4.0
+    container_name: pinot-server
+    depends_on:
+      - pinot-broker
+      - kafka
+    command: ["StartServer", "-zkAddress", "zookeeper:2181"]
+    ports:
+      - "8098:8098"
+    volumes:
+      - ./:/workspace
+
+  pinot-minion:
+    image: apachepinot/pinot:1.4.0
+    container_name: pinot-minion
+    depends_on:
+      - pinot-controller
+    command: ["StartMinion", "-zkAddress", "zookeeper:2181"]
+    volumes:
+      - ./:/workspace
+
+  demo-api:
+    image: python:3.13-slim
+    container_name: pinot-demo-api
+    working_dir: /workspace
+    depends_on:
+      - pinot-broker
+    environment:
+      PINOT_MODE: auto
+      PINOT_CONTROLLER_URL: http://pinot-controller:9000
+      PINOT_BROKER_URL: http://pinot-broker:8099
+      PINOT_EVENTS_TABLE: trip_events
+      PINOT_STATE_TABLE: trip_state
+      PINOT_MERCHANTS_TABLE: merchants_dim
+    command: >
+      bash -lc "pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir -e . &&
+      uvicorn app.main:app --host 0.0.0.0 --port 8010"
+    ports:
+      - "8010:8010"
+    volumes:
+      - ./:/workspace
