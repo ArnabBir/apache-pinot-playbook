@@ -61,29 +61,29 @@ The following diagram contrasts how Pinot handles a JSON column predicate with a
 
 ```mermaid
 flowchart TB
-    subgraph noidx["WITHOUT JSON INDEX — jsonExtractScalar at scan time"]
+    subgraph noidx["WITHOUT JSON INDEX - jsonExtractScalar at scan time"]
         direction TB
-        ni1["Query: WHERE jsonExtractScalar(attributes, '$.payment.gateway', 'STRING') = 'stripe'"]
+        ni1["Query: jsonExtractScalar with stripe equality<br/>WHERE jsonExtractScalar(attributes, path) = value"]
         ni2["Broker routes to all relevant servers"]
-        ni3["Server iterates every row in the segment\nnumDocsScanned = all rows"]
-        ni4["Each row: deserialize raw JSON bytes\nparse '$.payment.gateway'\ncompare to 'stripe'"]
-        ni5["Rows matching the predicate passed to aggregation\ntimeUsedMs grows linearly with segment size"]
+        ni3["Server iterates every row<br/>numDocsScanned = all rows"]
+        ni4["Each row: deserialize JSON<br/>parse path, compare to value"]
+        ni5["Matching rows to aggregation<br/>timeUsedMs grows linearly"]
         ni1 --> ni2 --> ni3 --> ni4 --> ni5
     end
 
-    subgraph withidx["WITH JSON INDEX — flat inverted index lookup"]
+    subgraph withidx["WITH JSON INDEX - flat inverted index lookup"]
         direction TB
-        wi1["JSON index built at segment creation time\nFlattened path-value pairs:\n  '$.payment.gateway' = 'stripe'  → {row 0, row 4, row 7}\n  '$.payment.gateway' = 'razorpay' → {row 1, row 2}\n  '$.payment.method'  = 'card'    → {row 0, row 1, row 4, row 7}\n  ..."]
-        wi2["Query: WHERE json_match(attributes, '\"$.payment.gateway\" = ''stripe''')\nIndex lookup: key '$.payment.gateway=stripe'\nReturns posting list {row 0, row 4, row 7} instantly"]
-        wi3["Only matching rows are deserialized\nnumDocsScanned = matching rows only\ntimeUsedMs = O(1) lookup + result fetch"]
+        wi1["Index built at segment creation<br/>Flattened path-value pairs:<br/>payment.gateway=stripe → row IDs<br/>payment.gateway=razorpay → row IDs<br/>payment.method=card → row IDs"]
+        wi2["Query using json_match<br/>WHERE json_match(attributes, predicate)<br/>Index lookup returns row IDs instantly<br/>No deserialization needed"]
+        wi3["Only matching rows deserialized<br/>numDocsScanned = matching rows<br/>timeUsedMs = O(1) lookup + fetch"]
         wi1 --> wi2 --> wi3
     end
 
     subgraph build["JSON Index Build Process"]
         direction LR
-        b1["Ingest row\nRaw JSON string stored in forward index"]
-        b2["At segment seal:\nParse every JSON value in every row\nFor each path-value pair:\n  encode as 'path=value' string\n  add row ID to posting list"]
-        b3["Flat inverted index written to segment\nSame structure as column inverted index\nbut keyed on path=value strings"]
+        b1["Ingest row<br/>Raw JSON stored in forward index"]
+        b2["At segment seal:<br/>Parse each JSON value<br/>For each path-value pair:<br/>encode as path=value string<br/>add row ID to posting list"]
+        b3["Flat inverted index written<br/>Same structure as column index<br/>keyed on path=value strings"]
         b1 --> b2 --> b3
     end
 ```
