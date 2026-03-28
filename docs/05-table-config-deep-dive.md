@@ -29,13 +29,13 @@ A Pinot table config is a JSON document with a well defined structure. Here is t
   // (or be prefixed with the schema name for OFFLINE/REALTIME suffixes).
   "tableName": "trip_state",
 
-  // The table type: REALTIME, OFFLINE, or both (hybrid).
+  // The table type: REALTIME, OFFLINE or both (hybrid).
   // REALTIME tables consume from streaming sources.
   // OFFLINE tables receive batch pushed segments.
   "tableType": "REALTIME",
 
   // Segment level configuration: time column, schema reference,
-  // replication factor, and retention policies.
+  // replication factor and retention policies.
   "segmentsConfig": {
     "timeColumnName": "last_event_time_ms",
     "schemaName": "trip_state",
@@ -84,7 +84,7 @@ A Pinot table config is a JSON document with a well defined structure. Here is t
     "storage": "20G"
   },
 
-  // Ingestion configuration: stream source, transforms, and error handling.
+  // Ingestion configuration: stream source, transforms and error handling.
   "ingestionConfig": {
     "continueOnError": false,
     "streamIngestionConfig": {
@@ -165,7 +165,7 @@ Realtime tables do not use `segmentPushType` because segments are created automa
 
 ## tableIndexConfig
 
-The `tableIndexConfig` section is where we declare what indexing strategies Pinot should apply. Each index type is an investment: the cost is paid in storage space and ingestion/reload time, and the benefit is received in query performance. The art of index configuration is choosing the right investments for the workload.
+The `tableIndexConfig` section is where we declare what indexing strategies Pinot should apply. Each index type is an investment: the cost is paid in storage space and ingestion/reload time and the benefit is received in query performance. The art of index configuration is choosing the right investments for the workload.
 
 ### loadMode
 
@@ -181,7 +181,7 @@ The operating system's virtual memory system maps segment files directly into th
 
 **HEAP (Java Heap)**
 
-Segment data is loaded entirely into JVM heap memory. Every column, index and metadata structure is held as Java objects on the heap. This delivers slightly lower query latency because there is no possibility of page faults during query execution and more predictable performance because all data is guaranteed to be in memory. However, total data size is limited by JVM heap size, large tables may not fit, garbage collection pressure and pause times increase, and server startup is slower because all segment data must be fully loaded before the server becomes available.
+Segment data is loaded entirely into JVM heap memory. Every column, index and metadata structure is held as Java objects on the heap. This delivers slightly lower query latency because there is no possibility of page faults during query execution and more predictable performance because all data is guaranteed to be in memory. However, total data size is limited by JVM heap size, large tables may not fit, garbage collection pressure and pause times increase and server startup is slower because all segment data must be fully loaded before the server becomes available.
 
 > [!TIP]
 > Use MMAP unless you have measured that page faults on hot queries cause unacceptable latency variance and you have confirmed that your data fits comfortably in JVM heap.
@@ -349,7 +349,7 @@ The routing section controls how the broker selects which server replicas to que
 
 The `balanced` selector (the default) distributes segment requests across all available server replicas in a round robin or load balanced fashion. Different segments from the same query may be served by different replicas. This maximizes utilization across all replicas and handles hot spots well because load is spread evenly, though a single query may touch many servers, increasing fan-out and network overhead. It is best suited for append-only fact tables where any replica can serve any segment equally well.
 
-The `strictReplicaGroup` selector routes all segments of a query to servers within the same replica group. If server A and server B form replica group 1 and server C and server D form replica group 2, a query is sent entirely to either group 1 or group 2, never to a mix. This ensures query consistency for upsert tables: with upsert, each server maintains its own in-memory hash map of primary keys to latest records, and querying across replica groups could produce inconsistent results because different replicas may have processed different subsets of events. The tradeoff is less flexibility in load distribution, since if one replica group is overloaded the broker cannot shift individual segment requests to the other group. This mode is required for correctness with upsert.
+The `strictReplicaGroup` selector routes all segments of a query to servers within the same replica group. If server A and server B form replica group 1 and server C and server D form replica group 2, a query is sent entirely to either group 1 or group 2, never to a mix. This ensures query consistency for upsert tables: with upsert, each server maintains its own in-memory hash map of primary keys to latest records and querying across replica groups could produce inconsistent results because different replicas may have processed different subsets of events. The tradeoff is less flexibility in load distribution, since if one replica group is overloaded the broker cannot shift individual segment requests to the other group. This mode is required for correctness with upsert.
 
 > [!IMPORTANT]
 > The rule is straightforward. If your table uses upsert, use `strictReplicaGroup`. If it does not, use `balanced`.
@@ -608,11 +608,11 @@ Understanding the three table types is essential for choosing the right architec
 
 ### When to Choose Each Type
 
-A realtime table is the right choice when data freshness measured in seconds matters for your use case, when your source of truth is a streaming platform, or when you need upsert or dedup behavior.
+A realtime table is the right choice when data freshness measured in seconds matters for your use case, when your source of truth is a streaming platform or when you need upsert or dedup behavior.
 
-An offline table is the right choice when data arrives in batch (daily ETL, periodic exports), when you need maximum query performance on historical data with sorted columns and fully optimized star tree indexes, or when the table is a dimension or lookup table that is refreshed periodically.
+An offline table is the right choice when data arrives in batch (daily ETL, periodic exports), when you need maximum query performance on historical data with sorted columns and fully optimized star tree indexes or when the table is a dimension or lookup table that is refreshed periodically.
 
-A hybrid table is the right choice when you need real time freshness for recent data but also need optimized, compacted storage for historical data, and when you are willing to accept the operational complexity of managing both realtime and offline ingestion pipelines for the same logical table.
+A hybrid table is the right choice when you need real time freshness for recent data but also need optimized, compacted storage for historical data and when you are willing to accept the operational complexity of managing both realtime and offline ingestion pipelines for the same logical table.
 
 ![Broker Time Boundary Handling for Hybrid Tables](images/BrokerTimeBoundary.jpg)
 *Source: [Apache Pinot Documentation](https://docs.pinot.apache.org/basics/architecture)*
@@ -657,7 +657,7 @@ Keep table configs minimal but deliberate. Every setting should have a documente
 
 Treat config changes as performance sensitive deploys. These are not mere metadata updates: apply them during low traffic windows and monitor query latency and server health (CPU and memory) immediately before and after the change. Start with conservative quotas and loosen them based on observed, real-world traffic patterns rather than optimistic projections. It is much easier to increase a quota than to recover a cluster crashed by a sudden spike.
 
-Always set explicit retention policies for production tables. Unbounded retention is a storage cost and an operational risk that compounds silently over time. Match the routing strategy to the table type: use `strictReplicaGroup` for upsert tables to ensure query consistency across replicas, and use `balanced` for append-only tables to maximize load distribution across the cluster. Set `continueOnError: false` for production tables, because in almost every analytical use case, silent data loss during ingestion is far worse than a visible ingestion failure that triggers an alert.
+Always set explicit retention policies for production tables. Unbounded retention is a storage cost and an operational risk that compounds silently over time. Match the routing strategy to the table type: use `strictReplicaGroup` for upsert tables to ensure query consistency across replicas and use `balanced` for append-only tables to maximize load distribution across the cluster. Set `continueOnError: false` for production tables, because in almost every analytical use case, silent data loss during ingestion is far worse than a visible ingestion failure that triggers an alert.
 
 ## Common Pitfalls
 
@@ -667,7 +667,7 @@ Changing flush thresholds without considering segment churn is a common operatio
 
 Skipping quotas until the first noisy neighbor incident is a reactive approach that always proves costly. By the time a noisy neighbor causes a production outage, the damage is already done. Set quotas proactively. Using `strictReplicaGroup` routing on append-only tables unnecessarily limits load distribution. Use `balanced` for tables without upsert. Conversely, using `balanced` routing on upsert tables can produce inconsistent query results because different replicas have different upsert state. Use `strictReplicaGroup` for correctness.
 
-Setting `continueOnError: true` without monitoring for dropped records creates invisible data quality problems. If you tell Pinot to skip bad records, you must have alerting on the number of records skipped. Omitting `comparisonColumns` on upsert tables is equally dangerous: without comparison columns, arrival order determines which record wins, and in a distributed system with multiple Kafka partitions and potential reprocessing, arrival order is not deterministic. Setting `metadataTTL` too aggressively causes records to reappear as new inserts after their metadata expires, potentially creating duplicate rows. Set TTL comfortably above your maximum update window.
+Setting `continueOnError: true` without monitoring for dropped records creates invisible data quality problems. If you tell Pinot to skip bad records, you must have alerting on the number of records skipped. Omitting `comparisonColumns` on upsert tables is equally dangerous: without comparison columns, arrival order determines which record wins and in a distributed system with multiple Kafka partitions and potential reprocessing, arrival order is not deterministic. Setting `metadataTTL` too aggressively causes records to reappear as new inserts after their metadata expires, potentially creating duplicate rows. Set TTL comfortably above your maximum update window.
 
 ## Practice Prompts
 

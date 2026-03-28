@@ -22,7 +22,7 @@ We are moving from a model where servers operate in complete isolation to a fram
 
 ### Single-Stage (v1): The Isolated Model
 
-In the single-stage model, the broker scatters the entire query plan to all relevant servers. Every server executes that plan against its local segments only, and the broker gathers and reduces the partial results into a final response. No communication occurs between servers during the execution phase.
+In the single-stage model, the broker scatters the entire query plan to all relevant servers. Every server executes that plan against its local segments only and the broker gathers and reduces the partial results into a final response. No communication occurs between servers during the execution phase.
 
 ### Multi-Stage (v2): The Distributed Model
 
@@ -58,7 +58,7 @@ Understanding the internal execution flow of MSE is essential for writing effici
 
 ### Logical Planning (Calcite-Based)
 
-When MSE receives a SQL query, it first passes it through Apache Calcite's query optimizer to produce a logical plan. Calcite is a mature, battle-tested SQL optimization framework used by many distributed query engines (including Flink, Druid and Beam). The logical plan is a tree of relational algebra operators, each representing a distinct operation: `LogicalTableScan` reads rows from a table, `LogicalFilter` applies WHERE predicates, `LogicalProject` selects specific columns or computes expressions, `LogicalAggregate` performs GROUP BY and aggregation, `LogicalJoin` joins two inputs, `LogicalWindow` computes window functions, `LogicalSort` applies ORDER BY and LIMIT, and `LogicalUnion`/`Intersect`/`Minus` handles set operations.
+When MSE receives a SQL query, it first passes it through Apache Calcite's query optimizer to produce a logical plan. Calcite is a mature, battle-tested SQL optimization framework used by many distributed query engines (including Flink, Druid and Beam). The logical plan is a tree of relational algebra operators, each representing a distinct operation: `LogicalTableScan` reads rows from a table, `LogicalFilter` applies WHERE predicates, `LogicalProject` selects specific columns or computes expressions, `LogicalAggregate` performs GROUP BY and aggregation, `LogicalJoin` joins two inputs, `LogicalWindow` computes window functions, `LogicalSort` applies ORDER BY and LIMIT and `LogicalUnion`/`Intersect`/`Minus` handles set operations.
 
 Calcite applies standard relational optimizations including predicate pushdown (moving filters closer to the data source), projection pruning (eliminating unnecessary columns) and join reordering.
 
@@ -91,7 +91,7 @@ flowchart TD
     style RootStage fill:#e8f5e9
 ```
 
-**Leaf Stages** are the entry points of the execution graph. They run on servers that hold segments for the scanned table, performing segment scanning with index-based filtering (just like the v1 engine), local projection and expression evaluation, and partial aggregation when possible. Leaf stages produce intermediate result sets that are passed to the next stage.
+**Leaf Stages** are the entry points of the execution graph. They run on servers that hold segments for the scanned table, performing segment scanning with index-based filtering (just like the v1 engine), local projection and expression evaluation and partial aggregation when possible. Leaf stages produce intermediate result sets that are passed to the next stage.
 
 **Intermediate Stages** perform operations that require data from multiple sources, including hash joins (combining two data streams by join key), shuffle-based aggregations (re-partitioning data by GROUP BY keys for global aggregation) and window function computation (partitioning data by window partition keys and applying ordered window operations). Intermediate stages can run on any server in the cluster, with the MSE scheduler assigning them based on resource availability.
 
@@ -251,7 +251,7 @@ The choice of join strategy has a dramatic impact on MSE query performance. Unde
 
 ### Hash Join
 
-In a hash join, both sides of the join are shuffled (repartitioned) by the join key. Rows from both tables with the same join key hash end up on the same worker. The worker builds a hash table from one side (the "build" side) and probes it with rows from the other side (the "probe" side). Hash join is the default strategy for joins where both sides are large. It is the most general-purpose join strategy and works correctly regardless of data distribution. Both sides of the join are shuffled over the network, so network I/O is proportional to the size of both inputs. The build side must fit in memory on each worker after partitioning, and CPU cost is proportional to the size of both inputs.
+In a hash join, both sides of the join are shuffled (repartitioned) by the join key. Rows from both tables with the same join key hash end up on the same worker. The worker builds a hash table from one side (the "build" side) and probes it with rows from the other side (the "probe" side). Hash join is the default strategy for joins where both sides are large. It is the most general-purpose join strategy and works correctly regardless of data distribution. Both sides of the join are shuffled over the network, so network I/O is proportional to the size of both inputs. The build side must fit in memory on each worker after partitioning and CPU cost is proportional to the size of both inputs.
 
 ```sql
 SET useMultistageEngine = true;
@@ -268,7 +268,7 @@ GROUP BY t.city, o.order_type
 
 ### Broadcast Join
 
-In a broadcast join, the small side of the join is broadcast (replicated) to every worker processing the large side. Each worker has a complete copy of the small table and can perform the join locally without shuffling the large table. Broadcast join is ideal when one side of the join is a small dimension table (thousands to low millions of rows) and the other side is a large fact table, the most common join pattern in Pinot, where dimension tables are typically small and fact tables are large. Only the small side is transmitted over the network, and it is sent to every worker. The large side is not shuffled at all, which saves significant network I/O. The small side must fit in memory on every worker. Pinot can automatically select broadcast join when it detects that one side is small, but you can also hint it explicitly using table-level configuration.
+In a broadcast join, the small side of the join is broadcast (replicated) to every worker processing the large side. Each worker has a complete copy of the small table and can perform the join locally without shuffling the large table. Broadcast join is ideal when one side of the join is a small dimension table (thousands to low millions of rows) and the other side is a large fact table, the most common join pattern in Pinot, where dimension tables are typically small and fact tables are large. Only the small side is transmitted over the network and it is sent to every worker. The large side is not shuffled at all, which saves significant network I/O. The small side must fit in memory on every worker. Pinot can automatically select broadcast join when it detects that one side is small, but you can also hint it explicitly using table-level configuration.
 
 ### Lookup Join
 
@@ -300,7 +300,7 @@ ORDER BY gmv DESC
 LIMIT 50
 ```
 
-The lookup join produces zero network shuffle for the dimension table data. The dimension table must fit in memory on every server, and dimension table updates require a table reload, making it best suited for slowly changing data.
+The lookup join produces zero network shuffle for the dimension table data. The dimension table must fit in memory on every server and dimension table updates require a table reload, making it best suited for slowly changing data.
 
 ### Join Ordering Considerations
 
@@ -499,7 +499,7 @@ JOIN merchants_dim m ON t.merchant_id = m.merchant_id
 GROUP BY t.city, m.vertical
 ```
 
-The EXPLAIN output shows the stage decomposition, shuffle strategies and operator assignments. Use this to verify that filters are pushed down to leaf stages, the smaller table is on the build side of the join, broadcast join is used when one side is small, and unnecessary shuffles are not present.
+The EXPLAIN output shows the stage decomposition, shuffle strategies and operator assignments. Use this to verify that filters are pushed down to leaf stages, the smaller table is on the build side of the join, broadcast join is used when one side is small and unnecessary shuffles are not present.
 
 > [!TIP]
 > Use EXPLAIN PLAN to validate your assumptions before promoting an MSE query to production. Surprise hash shuffles on large tables are the most common source of MSE performance problems.
@@ -555,7 +555,7 @@ The Multi-Stage Engine (MSE) changes how we think about server roles. Since inte
 
 ## Operating Heuristics
 
-We treat MSE as a capability amplifier, not a default performance upgrade, and follow these principles to maintain cluster stability.
+We treat MSE as a capability amplifier, not a default performance upgrade and follow these principles to maintain cluster stability.
 
 We use MSE selectively, only for queries that genuinely require it. Standard single-table aggregations are almost always faster on the single stage engine. We continue to denormalize hot-path fields proactively: if a dashboard frequently joins trips with merchant data, we add those attributes to the trip table to eliminate the join cost entirely.
 

@@ -2,15 +2,15 @@
 
 ## When OLAP Meets Time Series
 
-For decades, the worlds of OLAP analytics and time series monitoring have been treated as separate disciplines with separate tooling. Computing the 95th percentile of request latency over the last 24 hours, grouped by service and region with 5-minute buckets, required Prometheus or InfluxDB. Computing total revenue by city and product category for the same period required an engine like Apache Pinot, Druid or ClickHouse. These two workloads lived in separate systems, spoke separate query languages, and existed in separate operational silos.
+For decades, the worlds of OLAP analytics and time series monitoring have been treated as separate disciplines with separate tooling. Computing the 95th percentile of request latency over the last 24 hours, grouped by service and region with 5-minute buckets, required Prometheus or InfluxDB. Computing total revenue by city and product category for the same period required an engine like Apache Pinot, Druid or ClickHouse. These two workloads lived in separate systems, spoke separate query languages and existed in separate operational silos.
 
 ### Blurring the Boundary
 
-Apache Pinot's Time Series Engine represents a deliberate blurring of this boundary. It recognizes that many real world analytics problems are fundamentally time series problems dressed in OLAP clothing, or OLAP problems that would benefit from time series ergonomics.
+Apache Pinot's Time Series Engine represents a deliberate blurring of this boundary. It recognizes that many real world analytics problems are fundamentally time series problems dressed in OLAP clothing or OLAP problems that would benefit from time series ergonomics.
 
 > [!TIP]
 > **Real World Examples:**
-> Consider tracking GMV per city over 5-minute rolling windows in a ride-hailing platform, monitoring order rate trends with integrated anomaly detection in e-commerce, or analyzing transaction volume spikes by payment type in real time for fintech. All of these workloads already live in Pinot's OLAP engine. The Time Series Engine simply gives them a native, purpose-built query interface.
+> Consider tracking GMV per city over 5-minute rolling windows in a ride-hailing platform, monitoring order rate trends with integrated anomaly detection in e-commerce or analyzing transaction volume spikes by payment type in real time for fintech. All of these workloads already live in Pinot's OLAP engine. The Time Series Engine simply gives them a native, purpose-built query interface.
 
 ### What This Chapter Covers
 
@@ -113,7 +113,7 @@ sequenceDiagram
 
 **Step 6: Broker Merge.** The broker collects partial results from all servers and merges them. For time series responses, the broker also performs time bucket alignment (ensuring all series have consistent time boundaries), gap filling (inserting zero or null values for time buckets where no data exists) and series labeling (attaching dimension labels to each series for downstream consumption).
 
-**Step 7: Response Formatting.** The broker formats the merged result as a time series response, typically JSON with arrays of timestamps and values for each series, and returns it to the client.
+**Step 7: Response Formatting.** The broker formats the merged result as a time series response, typically JSON with arrays of timestamps and values for each series and returns it to the client.
 
 ### What Runs Where
 
@@ -252,7 +252,7 @@ Grafana is the most common target for Time Series Engine integration. Pinot can 
 └──────────────┘      └──────────────┘      └──────────────┘
 ```
 
-This integration enables real-time operational dashboards powered by Pinot data with the same look and feel as Prometheus-backed dashboards, alerting rules on Pinot metrics using Grafana Alerting with the same configuration experience as Prometheus alerts, and correlation of Pinot business metrics (GMV, order count, cancellation rate) with infrastructure metrics (CPU utilization, request latency) in a single Grafana dashboard.
+This integration enables real-time operational dashboards powered by Pinot data with the same look and feel as Prometheus-backed dashboards, alerting rules on Pinot metrics using Grafana Alerting with the same configuration experience as Prometheus alerts and correlation of Pinot business metrics (GMV order count, cancellation rate) with infrastructure metrics (CPU utilization, request latency) in a single Grafana dashboard.
 
 ### Prometheus-Style Query Patterns
 
@@ -267,7 +267,7 @@ Teams familiar with Prometheus often think in terms of rate, increase, histogram
 
 ### Building an Operational Metrics Layer
 
-For organizations that want to unify business metrics and operational metrics in a single platform, the Time Series Engine enables a powerful pattern. Business events (trips, orders, transactions) are ingested into Pinot through Kafka. Time series dashboards in Grafana query Pinot through the Time Series Engine. Alerts are set up on business KPIs, GMV dropping below threshold, cancellation rate spiking above baseline, using the same Grafana Alerting infrastructure that monitors infrastructure health. Business and infrastructure metrics are then correlated by placing Pinot-backed panels alongside Prometheus-backed panels on the same Grafana dashboard. This approach eliminates the need to duplicate business data into a separate time series database for monitoring purposes.
+For organizations that want to unify business metrics and operational metrics in a single platform, the Time Series Engine enables a powerful pattern. Business events (trips orders, transactions) are ingested into Pinot through Kafka. Time series dashboards in Grafana query Pinot through the Time Series Engine. Alerts are set up on business KPIs, GMV dropping below threshold, cancellation rate spiking above baseline, using the same Grafana Alerting infrastructure that monitors infrastructure health. Business and infrastructure metrics are then correlated by placing Pinot-backed panels alongside Prometheus-backed panels on the same Grafana dashboard. This approach eliminates the need to duplicate business data into a separate time series database for monitoring purposes.
 
 
 ## Example: Time-Series Request vs SQL Side by Side

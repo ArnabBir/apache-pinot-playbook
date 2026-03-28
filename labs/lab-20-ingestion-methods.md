@@ -2,31 +2,29 @@
 
 ## Overview
 
-Every ingestion operation in Apache Pinot can be initiated through three distinct interaction paths: the REST API accessed via curl, the command-line interface provided by `pinot-admin.sh`, and the browser-based Swagger UI embedded in the Controller. In production environments, any one of these paths may be unavailable due to network policy, tooling restrictions, or operational context. An engineer who knows only one path is brittle; an engineer who knows all three can always complete the work.
+Every ingestion operation in Apache Pinot can be initiated through three distinct interaction paths: the REST API accessed via curl, the command-line interface provided by `pinot-admin.sh` and the browser-based Swagger UI embedded in the Controller. In production environments, any one of these paths may be unavailable due to network policy, tooling restrictions or operational context. An engineer who knows only one path is brittle; an engineer who knows all three can always complete the work.
 
-This lab performs the same batch ingestion operation three ways, using a `merchants_dim` CSV file as the source. It then covers Pinot's complete transform function vocabulary, which runs at ingestion time rather than query time, and finishes with Groovy UDF support and the timestamp index — a pre-computation mechanism that makes time-bucketing GROUP BY queries significantly faster.
+This lab performs the same batch ingestion operation three ways, using a `merchants_dim` CSV file as the source. It then covers Pinot's complete transform function vocabulary, which runs at ingestion time rather than query time and finishes with Groovy UDF support and the timestamp index — a pre-computation mechanism that makes time-bucketing GROUP BY queries significantly faster.
 
 > [!NOTE]
 > Labs 1 and 2 must be complete and the `merchants_dim` table must exist before running the ingestion steps. The `trip_events` realtime table must be populated before the transform function steps, as those steps reference its existing configuration.
 
----
 
 ## Learning Objectives
 
 | Objective | Success Criterion |
 |-----------|-------------------|
 | Invoke an ingestion operation through all three interaction paths | Each of the three methods in Part A returns a 200 response or its equivalent success indicator |
-| Explain the difference between the `ingestFromFile` endpoint and `INSERT INTO FROM FILE` | You can state which is synchronous, which delegates to Minion, and which supports cloud URIs |
-| Read and explain every transform function in `trip_events_rt.table.json` | You can describe the input, output, and failure behavior of each configured transform |
+| Explain the difference between the `ingestFromFile` endpoint and `INSERT INTO FROM FILE` | You can state which is synchronous, which delegates to Minion and which supports cloud URIs |
+| Read and explain every transform function in `trip_events_rt.table.json` | You can describe the input, output and failure behavior of each configured transform |
 | Write a Groovy transform that classifies a numeric column | The `surge_tier` column appears in query results with the correct tier values |
 | Run a Groovy expression inside a SELECT query | The query returns correct `fare_tier` classifications without a schema change |
 | Add a timestamp index with multiple granularities | EXPLAIN PLAN reports `$DAY(event_time_ms)` resolving against a pre-computed column rather than computing at scan time |
 
----
 
 ## The Three Interaction Paths
 
-All three interaction methods route through the same Controller HTTP endpoint. The path taken to reach that endpoint differs, but the request body, the processing logic, and the response format are identical. Knowing this equivalence eliminates the uncertainty that arises when one path is unavailable.
+All three interaction methods route through the same Controller HTTP endpoint. The path taken to reach that endpoint differs, but the request body, the processing logic and the response format are identical. Knowing this equivalence eliminates the uncertainty that arises when one path is unavailable.
 
 ```mermaid
 flowchart TB
@@ -61,19 +59,17 @@ flowchart TB
 
 The response from the Controller is identical regardless of which client issued the request. A `200 OK` with a JSON body confirming the table name and the number of records loaded is the success indicator for all three paths.
 
----
 
 ## Part A: Three Ways to Ingest Batch Data
 
 The following steps each load the same `merchants.csv` file into the `merchants_dim_OFFLINE` table. Run each method independently and verify the expected response before proceeding to the next.
 
----
 
 ### Step 1: Via the Web UI (Swagger)
 
 Navigate to `http://localhost:9000/help` in a browser. This is the Swagger UI embedded in the Pinot Controller. It exposes every Controller REST endpoint as an interactive form.
 
-Locate the **Ingestion** section in the left navigation panel of the Swagger UI, or use the browser's search function to find `ingestFromFile`. Click the endpoint to expand it, then click `Try it out`.
+Locate the **Ingestion** section in the left navigation panel of the Swagger UI or use the browser's search function to find `ingestFromFile`. Click the endpoint to expand it, then click `Try it out`.
 
 The form presents the following fields. Fill them in exactly as specified.
 
@@ -109,7 +105,6 @@ Expected response body:
 
 The UI approach is well-suited for ad hoc exploration and for situations where you need to inspect the available parameters interactively. It is not suitable for automation because it requires a browser session.
 
----
 
 ### Step 2: Via the REST API (curl)
 
@@ -122,7 +117,7 @@ curl -X POST \
   "http://localhost:9000/ingestFromFile?tableNameWithType=merchants_dim_OFFLINE&batchConfigMapStr=%7B%22inputFormat%22%3A%22csv%22%7D"
 ```
 
-The URL encoding translates `{` to `%7B`, `"` to `%22`, and `:` to `%3A`. The simplified `batchConfigMapStr` value used here — `{"inputFormat":"csv"}` — is sufficient for standard CSV files. Pinot uses the `inputFormat` key to select the appropriate record reader and applies sensible defaults for the remaining parameters.
+The URL encoding translates `{` to `%7B`, `"` to `%22` and `:` to `%3A`. The simplified `batchConfigMapStr` value used here — `{"inputFormat":"csv"}` — is sufficient for standard CSV files. Pinot uses the `inputFormat` key to select the appropriate record reader and applies sensible defaults for the remaining parameters.
 
 To pass the full `batchConfigMapStr` from Step 1 via curl without manual URL encoding, use the `--data-urlencode` flag:
 
@@ -142,9 +137,8 @@ Expected response:
 }
 ```
 
-The curl approach is the standard method for automation scripts, CI/CD pipelines, and any context where a browser is unavailable. It produces identical results to the Swagger UI because both submit a multipart POST to the same endpoint.
+The curl approach is the standard method for automation scripts, CI/CD pipelines and any context where a browser is unavailable. It produces identical results to the Swagger UI because both submit a multipart POST to the same endpoint.
 
----
 
 ### Step 3: Via the CLI (pinot-admin.sh)
 
@@ -203,13 +197,12 @@ Expected output in the terminal (abbreviated):
 2024/03/01 10:15:24.901 INFO [SegmentTarPushJobRunner] Successfully pushed segment: merchants_dim_OFFLINE_0 to controller
 ```
 
-The CLI approach produces the same ingested segment as the other two methods. Its advantage is that the job specification is a plain text YAML file that can be version-controlled, reviewed, and executed deterministically across environments.
+The CLI approach produces the same ingested segment as the other two methods. Its advantage is that the job specification is a plain text YAML file that can be version-controlled, reviewed and executed deterministically across environments.
 
----
 
 ### Step 4: INSERT INTO FROM FILE Syntax (Modern Approach)
 
-Pinot supports a SQL-style ingestion statement that integrates directly with the Query Console and delegates execution to a Minion task. This approach is recommended for cloud-native deployments because the URI in the `FROM FILE` clause can reference any filesystem that Pinot supports, including S3, GCS, HDFS, and Azure Blob Storage.
+Pinot supports a SQL-style ingestion statement that integrates directly with the Query Console and delegates execution to a Minion task. This approach is recommended for cloud-native deployments because the URI in the `FROM FILE` clause can reference any filesystem that Pinot supports, including S3, GCS, HDFS and Azure Blob Storage.
 
 Open the Query Console at `http://localhost:9000/#/query` and run the following:
 
@@ -257,7 +250,6 @@ FROM FILE 's3://my-bucket/data/merchants.csv'
 
 No other change is required. The same `INSERT INTO FROM FILE` syntax works across all supported storage backends.
 
----
 
 ### Step 5: Ingestion Method Comparison
 
@@ -268,7 +260,6 @@ No other change is required. The same `INSERT INTO FROM FILE` syntax works acros
 | CLI (pinot-admin.sh) | Containerized batch pipelines, reproducible job specs, local file ingestion inside the container | Requires shell access to the container or a mounted volume; YAML file must be pre-placed | No (uses container network) |
 | INSERT INTO FROM FILE | Cloud-native batch ingestion, S3/GCS/HDFS sources, integration with Minion task lifecycle | Asynchronous — does not block; requires Minion to be running; task failures must be monitored separately | Optional via cluster auth |
 
----
 
 ## Part B: Transform Functions
 
@@ -276,7 +267,6 @@ Transform functions execute at ingestion time. They run before the row is writte
 
 Transforms are configured in the `ingestionConfig.transformConfigs` array inside the table configuration JSON. Each entry maps a destination column name to a transform expression using Pinot's function vocabulary.
 
----
 
 ### Step 6: Inspect the Transform Configuration in trip_events_rt.table.json
 
@@ -347,7 +337,7 @@ Each function is explained in the following sections.
 }
 ```
 
-**`toEpochMillis`** converts a date or timestamp string in the source record into a Unix epoch millisecond long value. The source column `event_time` is a human-readable ISO 8601 string; the resulting `event_time_ms` column is a long that Pinot can use for range pruning, time boundary resolution, and timestamp index operations.
+**`toEpochMillis`** converts a date or timestamp string in the source record into a Unix epoch millisecond long value. The source column `event_time` is a human-readable ISO 8601 string; the resulting `event_time_ms` column is a long that Pinot can use for range pruning, time boundary resolution and timestamp index operations.
 
 ```json
 {
@@ -365,7 +355,6 @@ Each function is explained in the following sections.
 }
 ```
 
----
 
 ### Transform Function Reference Table
 
@@ -391,15 +380,13 @@ The following table is a complete reference for the transform functions availabl
 | `div` | `div(col1, col2)` | DOUBLE | `div(fare_amount, distance_km)` | Arithmetic division; undefined behavior if divisor is zero |
 | `groovy` | `groovy(typeDescriptor, script, inputCols...)` | Configured type | See Part C | Arbitrary transformation logic; any return type |
 
----
 
 ## Part C: Groovy Transform
 
-When no built-in function covers the required transformation logic, Pinot supports embedding Groovy scripts directly in transform configurations. The Groovy transform is the most expressive option available — it can evaluate any logic expressible in Groovy, including conditionals, loops, string operations, and arithmetic combinations.
+When no built-in function covers the required transformation logic, Pinot supports embedding Groovy scripts directly in transform configurations. The Groovy transform is the most expressive option available — it can evaluate any logic expressible in Groovy, including conditionals, loops, string operations and arithmetic combinations.
 
-The Groovy function signature takes three components: a JSON type descriptor that defines the output type, the Groovy script body as a string, and one or more input column references. Inside the script body, input columns are referenced as `arg0`, `arg1`, `arg2`, and so on, in the order they appear in the argument list.
+The Groovy function signature takes three components: a JSON type descriptor that defines the output type, the Groovy script body as a string and one or more input column references. Inside the script body, input columns are referenced as `arg0`, `arg1`, `arg2` and so on, in the order they appear in the argument list.
 
----
 
 ### Step 7: Add a Groovy Transform for surge_tier
 
@@ -460,7 +447,6 @@ Expected output pattern:
 | 1.7 | medium | 38 |
 | 2.2 | high | 11 |
 
----
 
 ### Step 8: Groovy in Queries
 
@@ -492,15 +478,13 @@ Expected output:
 > [!NOTE]
 > Groovy execution in queries requires explicit enablement in the server configuration. Add the following property to the server's `pinot-server.properties` file or to the server's environment configuration: `pinot.server.query.executor.enable.groovy=true`. Without this flag, a query containing a Groovy expression returns an error with the message `Groovy is not enabled on the server`. Groovy in ingestion transforms does not require this flag — it applies only to query-time execution.
 
----
 
 ## Part D: Timestamp Index
 
-The timestamp index pre-computes truncated time values at one or more granularities — DAY, WEEK, MONTH, or HOUR — at segment creation time. Instead of computing `FLOOR(event_time_ms / 86400000) * 86400000` at query time for every scanned row, Pinot reads the pre-computed day-boundary value from a stored column. This transforms a compute-intensive expression over potentially millions of rows into a simple column read.
+The timestamp index pre-computes truncated time values at one or more granularities — DAY, WEEK, MONTH or HOUR — at segment creation time. Instead of computing `FLOOR(event_time_ms / 86400000) * 86400000` at query time for every scanned row, Pinot reads the pre-computed day-boundary value from a stored column. This transforms a compute-intensive expression over potentially millions of rows into a simple column read.
 
-The timestamp index is most impactful for dashboards and reports that aggregate data by calendar day, week, or month over large segments.
+The timestamp index is most impactful for dashboards and reports that aggregate data by calendar day, week or month over large segments.
 
----
 
 ### Step 9: Add a Timestamp Index with Multiple Granularities
 
@@ -517,7 +501,7 @@ Add the following field configuration to the `tableIndexConfig.fieldConfigList` 
 }
 ```
 
-This instructs Pinot to store three additional columns inside each segment at creation time: `$DAY(event_time_ms)`, `$WEEK(event_time_ms)`, and `$MONTH(event_time_ms)`. Each contains the epoch millisecond value truncated to the respective calendar boundary. These columns are internal to the segment and do not appear in the schema — they are referenced through the special `$GRANULARITY(column)` syntax in SQL.
+This instructs Pinot to store three additional columns inside each segment at creation time: `$DAY(event_time_ms)`, `$WEEK(event_time_ms)` and `$MONTH(event_time_ms)`. Each contains the epoch millisecond value truncated to the respective calendar boundary. These columns are internal to the segment and do not appear in the schema — they are referenced through the special `$GRANULARITY(column)` syntax in SQL.
 
 Submit the updated configuration and reload segments:
 
@@ -584,18 +568,16 @@ The timestamp index granularities and their query syntax are summarized below.
 | `WEEK` | `$WEEK(col)` | Start of the Monday-anchored ISO week | 1708905600000 (2024-02-26 00:00:00 UTC) |
 | `MONTH` | `$MONTH(col)` | Start of the calendar month | 1709251200000 (2024-03-01 00:00:00 UTC) |
 
----
 
 ## Reflection Prompts
 
-1. Steps 1, 2, and 3 each successfully ingested data using a different interaction path. The segment count in `merchants_dim_OFFLINE` after all three steps will exceed the expected row count. Explain why this happens, what mechanism Pinot uses to identify duplicate segments, and what operation you would run to consolidate the result.
+1. Steps 1, 2 and 3 each successfully ingested data using a different interaction path. The segment count in `merchants_dim_OFFLINE` after all three steps will exceed the expected row count. Explain why this happens, what mechanism Pinot uses to identify duplicate segments and what operation you would run to consolidate the result.
 
 2. The `lower(city)` transform in Step 6 creates a derived column `city_normalized`, but the original `city` column is also retained in the schema. Describe a scenario where retaining both columns is the correct design choice and a scenario where it wastes storage. What table configuration change would remove the raw `city` column from ingested segments?
 
-3. The Groovy transform in Step 7 is evaluated once at ingestion time and stored in the segment. The equivalent Groovy expression in Step 8 is evaluated at query time against every scanned row. For a table with 500 million rows queried 1,000 times per day, calculate the approximate number of Groovy script evaluations per day for each approach, and explain why the ingestion-time approach is the correct architectural choice for a stable classification rule.
+3. The Groovy transform in Step 7 is evaluated once at ingestion time and stored in the segment. The equivalent Groovy expression in Step 8 is evaluated at query time against every scanned row. For a table with 500 million rows queried 1,000 times per day, calculate the approximate number of Groovy script evaluations per day for each approach and explain why the ingestion-time approach is the correct architectural choice for a stable classification rule.
 
-4. The timestamp index configured in Step 9 specifies `DAY`, `WEEK`, and `MONTH` granularities. A new dashboard requirement arrives that needs hourly trip counts. Without adding `HOUR` to the timestamp index, what is the SQL approach for computing hourly buckets? What is the performance trade-off compared to adding `HOUR` to the index?
+4. The timestamp index configured in Step 9 specifies `DAY`, `WEEK` and `MONTH` granularities. A new dashboard requirement arrives that needs hourly trip counts. Without adding `HOUR` to the timestamp index, what is the SQL approach for computing hourly buckets? What is the performance trade-off compared to adding `HOUR` to the index?
 
----
 
 [Previous: Lab 17 — Real-Time Dashboard Integration with Grafana](lab-17-grafana-integration.md) | [Next: Lab 21 — Storage Tiers and Cold Data Management](lab-21-storage-tiers.md)

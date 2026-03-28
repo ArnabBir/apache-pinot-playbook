@@ -2,12 +2,11 @@
 
 ## Overview
 
-The single-stage query engine handles scatter-gather patterns elegantly, but it cannot execute distributed joins or window functions. This lab introduces the Multi-Stage Engine (v2), which breaks queries into a directed acyclic graph of computation stages that can shuffle data across servers. You will run join queries, window function queries, and CTE-based analytics, then compare their execution plans and latencies against equivalent single-stage patterns.
+The single-stage query engine handles scatter-gather patterns elegantly, but it cannot execute distributed joins or window functions. This lab introduces the Multi-Stage Engine (v2), which breaks queries into a directed acyclic graph of computation stages that can shuffle data across servers. You will run join queries, window function queries and CTE-based analytics, then compare their execution plans and latencies against equivalent single-stage patterns.
 
 > [!NOTE]
 > Data from Lab 3 must be present in `trip_state` and the merchant dimension must be loaded from Lab 2 before running the join queries.
 
----
 
 ## Learning Objectives
 
@@ -19,7 +18,6 @@ The single-stage query engine handles scatter-gather patterns elegantly, but it 
 | Measure JOIN overhead | You have recorded `timeUsedMs` for equivalent single-stage and multi-stage queries and can explain the difference |
 | Apply the denormalization trade-off | You can state when to pre-join data into a fact table versus query-time join |
 
----
 
 ## The Two Query Engines
 
@@ -55,7 +53,6 @@ flowchart TB
 
 **The core difference.** The single-stage engine moves query results up from servers to the broker. Data flows in one direction. The multi-stage engine can move intermediate results *between* servers. Data shuffles laterally across the cluster. This shuffle capability enables joins and window functions but introduces network transfer cost.
 
----
 
 ## The Distributed Query Plan for a JOIN
 
@@ -86,7 +83,6 @@ sequenceDiagram
     Broker-->>Client: Final result with stage statistics
 ```
 
----
 
 ## Step-by-Step Instructions
 
@@ -96,7 +92,7 @@ sequenceDiagram
 python3 scripts/query_pinot.py --file sql/04_multistage_join.sql --query-type multistage
 ```
 
-This query joins the realtime `trip_state` table against the offline `merchants_dim` dimension table on `merchant_id`, then aggregates by city, vertical, and contract tier.
+This query joins the realtime `trip_state` table against the offline `merchants_dim` dimension table on `merchant_id`, then aggregates by city, vertical and contract tier.
 
 **Expected output fields to examine:**
 
@@ -106,7 +102,6 @@ This query joins the realtime `trip_state` table against the offline `merchants_
 | `stageStats` | Breakdown of time spent in each stage |
 | `timeUsedMs` | Total latency including shuffle cost |
 
----
 
 ### Step 2 — Run the Window Function Query
 
@@ -118,7 +113,6 @@ This query ranks merchants within each city by gross merchandise value using `RA
 
 **What the multi-stage engine does here.** Stage 1 scans `trip_state` and computes per-merchant GMV aggregations. Stage 2 applies the window function — this requires sorting data within each city partition, which cannot happen on a single server because trip data is distributed by partition key. The broker coordinates the sort-merge across servers before applying the `RANK()` assignment. Stage 3 filters to the top-ranked merchants per city and applies the final `ORDER BY`.
 
----
 
 ### Step 3 — Execute Queries in the Query Console
 
@@ -222,7 +216,6 @@ GROUP BY t.city, m.contract_tier
 ORDER BY t.city, tier_rank
 ```
 
----
 
 ### Step 4 — Measure Single-Stage vs Multi-Stage Latency
 
@@ -262,7 +255,6 @@ ORDER BY gmv DESC
 
 The JOIN adds latency proportional to the data shuffle cost, which is the network transfer of moving intermediate results between servers. For this small dataset, the difference is modest. In production with billions of rows, the difference compounds and the denormalization trade-off becomes critical.
 
----
 
 ### Step 5 — Inspect the Execution Plan
 
@@ -284,7 +276,6 @@ ORDER BY gmv DESC
 
 The plan shows the stage graph. Look for `EXCHANGE` nodes. These represent data shuffles between stages. Each exchange has a distribution type: `HASH` means data is partitioned by a key for join alignment, `BROADCAST` means the smaller table is copied to all servers, `SINGLETON` means all data flows to a single node for final aggregation.
 
----
 
 ## Denormalization Trade-Off Analysis
 
@@ -319,7 +310,6 @@ flowchart TB
 | Schema flexibility | Low — fact schema must change | High — add columns to dimension freely |
 | Suitable for high-QPS endpoints | Yes | No |
 
----
 
 ## When to Use Each Engine
 
@@ -331,7 +321,6 @@ flowchart TB
 | High-QPS user-facing queries | CTE-based multi-pass analytics |
 | Latency below 50ms target | Analytical exploration queries |
 
----
 
 ## Reflection Prompts
 
@@ -343,6 +332,5 @@ flowchart TB
 
 4. Under what data volume conditions does the denormalization trade-off break down? That is, when does the storage cost of denormalization become higher than the latency cost of a join?
 
----
 
 [Previous: Lab 5 — Upsert and CDC](lab-05-upsert-cdc.md) | [Next: Lab 7 — Time Series Analytics](lab-07-time-series.md)

@@ -2,12 +2,11 @@
 
 ## Overview
 
-Time is the primary dimension in every operational analytics system. This lab demonstrates three distinct approaches to time-bucketed analytics in Pinot, including pre-computed helper columns, SQL floor functions, and the native time-series query model, and builds intuition for when each approach is appropriate. You will measure the performance difference between pre-computed and function-based bucketing, and design a time-series API contract that abstracts the underlying query complexity from downstream consumers.
+Time is the primary dimension in every operational analytics system. This lab demonstrates three distinct approaches to time-bucketed analytics in Pinot, including pre-computed helper columns, SQL floor functions and the native time-series query model and builds intuition for when each approach is appropriate. You will measure the performance difference between pre-computed and function-based bucketing and design a time-series API contract that abstracts the underlying query complexity from downstream consumers.
 
 > [!NOTE]
-> Data from Lab 3 must be present in `trip_state` before running the time-series queries. The `last_event_minute_bucket_ms`, `last_event_day`, and `last_event_hour` columns must be present in the ingested records.
+> Data from Lab 3 must be present in `trip_state` before running the time-series queries. The `last_event_minute_bucket_ms`, `last_event_day` and `last_event_hour` columns must be present in the ingested records.
 
----
 
 ## Learning Objectives
 
@@ -19,7 +18,6 @@ Time is the primary dimension in every operational analytics system. This lab de
 | Interpret the time-series API contract | You can explain the mapping from API parameters to the underlying SQL query |
 | Identify the right bucketing strategy | Given a query requirement and data volume, you can choose the appropriate approach |
 
----
 
 ## The Three Time-Bucketing Approaches
 
@@ -50,9 +48,8 @@ flowchart TB
     end
 ```
 
-**The pre-computation principle.** Bucket boundary arithmetic (`FLOOR(ts / bucket_ms) * bucket_ms`) applied to millions of rows at query time is a fixed cost that compounds with data volume. Moving that computation to ingestion time pays it once and stores the result as a plain column, which benefits from inverted index lookups, segment pruning, and dictionary encoding. The trade-off is that the bucket granularity is locked at ingestion time.
+**The pre-computation principle.** Bucket boundary arithmetic (`FLOOR(ts / bucket_ms) * bucket_ms`) applied to millions of rows at query time is a fixed cost that compounds with data volume. Moving that computation to ingestion time pays it once and stores the result as a plain column, which benefits from inverted index lookups, segment pruning and dictionary encoding. The trade-off is that the bucket granularity is locked at ingestion time.
 
----
 
 ## Pre-Computed Helper Columns in the Schema
 
@@ -82,7 +79,6 @@ flowchart LR
 | `last_event_hour` | INT | Hour-of-day integer 0–23 | Hourly distribution queries |
 | `last_event_minute_bucket_ms` | LONG | `FLOOR(ts / 300000) * 300000` | 5-minute time series |
 
----
 
 ## Step-by-Step Instructions
 
@@ -105,7 +101,6 @@ bucket_start_ms   | gmv
 
 Each row represents one five-minute window. The `bucket_start_ms` value is the epoch millisecond timestamp for the start of the bucket. Convert it to a human-readable date with `FROM_DATE_TIME(bucket_start_ms, 'yyyy-MM-dd HH:mm')`.
 
----
 
 ### Step 2 — Call the Time-Series API Endpoint
 
@@ -131,9 +126,8 @@ curl -s -X POST http://localhost:8010/api/v1/query/timeseries \
 }
 ```
 
-The API translates the `bucket_minutes` and `window_hours` parameters into SQL predicates against `last_event_time_ms` and groups by the appropriate pre-computed bucket column. The response format is designed for consumption by charting libraries. Typed timestamps, numeric values, and a consistent schema regardless of metric make integration straightforward.
+The API translates the `bucket_minutes` and `window_hours` parameters into SQL predicates against `last_event_time_ms` and groups by the appropriate pre-computed bucket column. The response format is designed for consumption by charting libraries. Typed timestamps, numeric values and a consistent schema regardless of metric make integration straightforward.
 
----
 
 ### Step 3 — Run Time-Series Queries in the Query Console
 
@@ -202,7 +196,6 @@ Record the `timeUsedMs` for Query 3 and Query 4. They produce identical results 
 | Query 3 | Pre-computed column | | Inverted index on `last_event_minute_bucket_ms` |
 | Query 4 | FLOOR function | | No index — full column scan with arithmetic |
 
----
 
 ### Step 4 — Multi-Dimensional Time Series
 
@@ -248,7 +241,6 @@ GROUP BY last_event_hour
 ORDER BY revenue DESC
 ```
 
----
 
 ### Step 5 — Human-Readable Timestamps
 
@@ -269,7 +261,6 @@ LIMIT 20
 > [!TIP]
 > When building dashboards or downstream APIs, always convert epoch milliseconds to human-readable timestamps at the presentation layer, not inside Pinot queries. Keeping Pinot queries operating on epoch milliseconds preserves index efficiency and avoids string parsing overhead.
 
----
 
 ### Step 6 — Inspect the Native Time-Series Request Format
 
@@ -283,11 +274,10 @@ Open `sql/timeseries_gmv_request.json` and examine the request structure.
 }
 ```
 
-This request uses the `myTSQL` time-series query language, a specialized DSL that maps directly to time-series semantics. The `series()` function handles bucket alignment, the `by=` clause adds dimension breakdowns, the `every=` parameter sets the bucket granularity, and the `window=` parameter sets the lookback horizon.
+This request uses the `myTSQL` time-series query language, a specialized DSL that maps directly to time-series semantics. The `series()` function handles bucket alignment, the `by=` clause adds dimension breakdowns, the `every=` parameter sets the bucket granularity and the `window=` parameter sets the lookback horizon.
 
-The native time-series engine is more expressive than SQL floor functions for time-series workloads. It supports gap filling, rate computation, moving averages, and monotonic counter normalization out of the box. However, it requires the time-series engine plugin to be configured in the Pinot deployment and uses a different query endpoint than the standard SQL API.
+The native time-series engine is more expressive than SQL floor functions for time-series workloads. It supports gap filling, rate computation, moving averages and monotonic counter normalization out of the box. However, it requires the time-series engine plugin to be configured in the Pinot deployment and uses a different query endpoint than the standard SQL API.
 
----
 
 ## Bucketing Strategy Selection
 
@@ -314,7 +304,6 @@ flowchart TD
 | SQL FLOOR function | Moderate | High | None | Ad hoc analytics and exploratory queries |
 | Native time-series engine | Low | Highest | Plugin setup required | Metrics platforms, rate computation, gap filling |
 
----
 
 ## Reflection Prompts
 
@@ -326,6 +315,5 @@ flowchart TD
 
 4. A downstream service consumes the time-series API and expects consistent bucket boundaries regardless of when queries are issued. Which bucketing approach provides this guarantee and why?
 
----
 
 [Previous: Lab 6 — Multi-Stage Queries](lab-06-multi-stage-queries.md) | [Next: Lab 8 — SLO and Incident Drill](lab-08-slo-incident.md)

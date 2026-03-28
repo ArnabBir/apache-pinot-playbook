@@ -51,7 +51,7 @@ We define this in the schema. It is the unique identifier (like `order_id` or `u
 
 ### 2. Comparison Column
 
-This determines which record **wins** the update. We typically use a timestamp representing the most recent event time, a monotonically increasing version number, or ingestion order (the record that arrives last is the default when no explicit comparison column is configured).
+This determines which record **wins** the update. We typically use a timestamp representing the most recent event time, a monotonically increasing version number or ingestion order (the record that arrives last is the default when no explicit comparison column is configured).
 
 ### 3. Upsert Mode
 
@@ -76,7 +76,7 @@ FULL upsert is the simplest mode. When a new record arrives with the same primar
 }
 ```
 
-FULL upsert is the right choice when producers always emit complete entity snapshots (every message contains all fields for the entity), when there is no need to merge partial updates from different producers, and when you want the simplest mental model with the least configuration.
+FULL upsert is the right choice when producers always emit complete entity snapshots (every message contains all fields for the entity), when there is no need to merge partial updates from different producers and when you want the simplest mental model with the least configuration.
 
 **How FULL upsert works internally:**
 
@@ -155,7 +155,7 @@ flowchart TB
 
 The `defaultPartialUpsertStrategy` applies to any column not explicitly listed in `partialUpsertStrategies`. Setting it to `OVERWRITE` means columns without a specific strategy behave like FULL upsert.
 
-PARTIAL upsert is appropriate when different microservices update different columns of the same entity (for example, the payment service updates `fare_amount` while the routing service updates `total_distance_km`), when you need running counters or aggregations that accumulate over time, and when you want to maintain multi value columns that grow as new events arrive.
+PARTIAL upsert is appropriate when different microservices update different columns of the same entity (for example, the payment service updates `fare_amount` while the routing service updates `total_distance_km`), when you need running counters or aggregations that accumulate over time and when you want to maintain multi value columns that grow as new events arrive.
 
 ### FULL vs PARTIAL: Comparison Table
 
@@ -198,7 +198,7 @@ Note that dedup uses a separate `dedupConfig` block rather than the `upsertConfi
 
 ### When Dedup Is Preferable to Upsert
 
-Dedup is the right choice in three situations. First, when your stream may deliver duplicate messages but duplicates are exact copies. This is common with at-least-once delivery guarantees in Kafka, where the same message may be delivered twice due to producer retries or consumer rebalances, and you want to keep only the first copy. Second, when there is no concept of "newer version" because all duplicates are identical. If two records with the same key could have different column values, you need upsert (not dedup) to determine which one wins. Third, when you want lower memory overhead than upsert, since dedup requires the same primary key lookup structure but does not need to store comparison column values or support merge strategies.
+Dedup is the right choice in three situations. First, when your stream may deliver duplicate messages but duplicates are exact copies. This is common with at-least-once delivery guarantees in Kafka, where the same message may be delivered twice due to producer retries or consumer rebalances and you want to keep only the first copy. Second, when there is no concept of "newer version" because all duplicates are identical. If two records with the same key could have different column values, you need upsert (not dedup) to determine which one wins. Third, when you want lower memory overhead than upsert, since dedup requires the same primary key lookup structure but does not need to store comparison column values or support merge strategies.
 
 
 ## CDC (Change Data Capture) Patterns
@@ -226,7 +226,7 @@ Setting up this pipeline requires four steps.
 1. **Deploy Debezium.** Configure a Debezium connector for your source database (MySQL, PostgreSQL, MongoDB, etc.). Debezium reads the transaction log and produces change events to a Kafka topic, typically one topic per source table.
 2. **Configure the Kafka topic.** The topic must use the source table's primary key as the Kafka message key. Debezium does this by default. Ensure the partition count aligns with your Pinot server count.
 3. **Configure the Pinot table.** Create a REALTIME table with upsert enabled, using the source table's primary key as the Pinot primary key. The comparison column should be a monotonically increasing value such as the database transaction sequence number, the Debezium `ts_ms` field or an explicit version column.
-4. **Handle the message format.** Debezium produces complex JSON envelopes that include `before` and `after` snapshots of the row, the operation type (`c` for create, `u` for update, `d` for delete) and metadata. You have two options: use Debezium's **flattened format** (via the `ExtractNewRecordState` single message transform in Kafka Connect) to produce simple JSON objects that Pinot's JSON decoder can parse directly, or write a **custom Pinot decoder** that understands the Debezium envelope format and extracts the relevant fields.
+4. **Handle the message format.** Debezium produces complex JSON envelopes that include `before` and `after` snapshots of the row, the operation type (`c` for create, `u` for update, `d` for delete) and metadata. You have two options: use Debezium's **flattened format** (via the `ExtractNewRecordState` single message transform in Kafka Connect) to produce simple JSON objects that Pinot's JSON decoder can parse directly or write a **custom Pinot decoder** that understands the Debezium envelope format and extracts the relevant fields.
 
 > [!IMPORTANT]
 > The flattened format is strongly recommended for simplicity.
@@ -282,7 +282,7 @@ With composite keys, the Kafka message key must be a composite of the same field
 
 ### Impact on Memory
 
-The primary key lookup structure stores one entry for every unique primary key in the table. Each entry contains the primary key value (or its hash), the segment ID where the latest record resides, the document ID within that segment, and the comparison column value (for ordering decisions).
+The primary key lookup structure stores one entry for every unique primary key in the table. Each entry contains the primary key value (or its hash), the segment ID where the latest record resides, the document ID within that segment and the comparison column value (for ordering decisions).
 
 For a table with 100 million unique keys where each key is a 36-character UUID, the primary key lookup structure alone can consume several gigabytes of heap memory. This is in addition to the memory used for segment data and indexes.
 
@@ -430,7 +430,7 @@ Standard `balanced` routing distributes query segments across all servers, which
 
 When partition alignment is broken, queries begin showing duplicate rows where two records with the same primary key both appear as "latest." `SELECT COUNT(*)` returns more rows than expected because superseded records are not being filtered. The same query may return different results depending on which servers the broker routes to.
 
-Common causes of alignment breakage include changing the Kafka topic's partition count after Pinot has started consuming (this changes key-to-partition mapping), producers not setting the Kafka message key (causing round-robin partitioning), a Pinot server rebalance without a corresponding reconsolidation of the primary key lookup structure, and using a hash function for the Kafka key that does not match Kafka's default partitioner.
+Common causes of alignment breakage include changing the Kafka topic's partition count after Pinot has started consuming (this changes key-to-partition mapping), producers not setting the Kafka message key (causing round-robin partitioning), a Pinot server rebalance without a corresponding reconsolidation of the primary key lookup structure and using a hash function for the Kafka key that does not match Kafka's default partitioner.
 
 
 ## Production Considerations

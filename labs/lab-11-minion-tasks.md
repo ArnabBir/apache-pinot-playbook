@@ -4,14 +4,13 @@
 
 A Pinot cluster that ingests from a high-throughput Kafka topic accumulates segments continuously. Each time a realtime consuming segment crosses its configured flush threshold — whether by row count or elapsed time — Pinot commits it to deep storage as a completed segment and opens a new consuming segment in its place. In a busy production system, this means hundreds of new segments per day. Over weeks, a single table can hold thousands of segments, each containing only a fraction of the rows that a well-compacted segment would hold.
 
-This fragmentation is not a correctness problem. Queries still return accurate results. The damage is performance: every query must fan out across all segments that overlap the requested time range, and small segments impose the same per-segment overhead as large ones. The broker opens connections, the server deserializes metadata, index lookups produce smaller intermediate results that require more merging. The cumulative effect is measurable latency degradation that grows monotonically as the cluster ages.
+This fragmentation is not a correctness problem. Queries still return accurate results. The damage is performance: every query must fan out across all segments that overlap the requested time range and small segments impose the same per-segment overhead as large ones. The broker opens connections, the server deserializes metadata, index lookups produce smaller intermediate results that require more merging. The cumulative effect is measurable latency degradation that grows monotonically as the cluster ages.
 
-Pinot Minion is the background process that reverses this accumulation. It runs as a separate JVM process outside the query path, receives task assignments from the Controller, and performs compaction, purging, segment format conversion, and custom data processing tasks. This lab makes the fragmentation penalty visible and measurable, then shows Minion restoring the cluster to an efficient compacted state.
+Pinot Minion is the background process that reverses this accumulation. It runs as a separate JVM process outside the query path, receives task assignments from the Controller and performs compaction, purging, segment format conversion and custom data processing tasks. This lab makes the fragmentation penalty visible and measurable, then shows Minion restoring the cluster to an efficient compacted state.
 
 > [!NOTE]
 > This lab builds on the data ingested in Labs 3 and 4. The `trip_events` realtime table must be populated with at least several hundred rows across multiple segments before the compaction steps will produce meaningful before/after measurements.
 
----
 
 ## Learning Objectives
 
@@ -24,11 +23,10 @@ Pinot Minion is the background process that reverses this accumulation. It runs 
 | Measure the before/after performance impact | Your measurement table shows reduced `numSegmentsQueried` and `timeUsedMs` after compaction |
 | Configure a PurgeTask for data retention | The `taskConfig` block includes a valid `bufferTimePeriod` and `purgeParallelism` setting |
 
----
 
 ## The Minion Architecture
 
-Minion is a first-class component in the Pinot cluster topology. Unlike the Controller, Broker, and Server, which all serve requests directly from clients or from each other during query execution, Minion operates entirely in the background. It accepts task assignments from the Controller and reports completion back through the same channel.
+Minion is a first-class component in the Pinot cluster topology. Unlike the Controller, Broker and Server, which all serve requests directly from clients or from each other during query execution, Minion operates entirely in the background. It accepts task assignments from the Controller and reports completion back through the same channel.
 
 ```mermaid
 flowchart TB
@@ -74,9 +72,8 @@ flowchart TB
     task_types -.->|"Executed by"| minion_pool
 ```
 
-The task lifecycle proceeds as follows. The Controller's task scheduler runs on a configurable cron interval and examines each table's `taskConfig` section to determine which tasks are due. When a task is due, the Controller creates a task entry in ZooKeeper and assigns it to an available Minion worker. The Minion worker reads the source segments from deep storage, applies the compaction logic, writes the output segments back to deep storage, and reports completion to the Controller. The Controller then updates the segment registry in ZooKeeper, and the Servers receive notification to load the new compacted segments and unload the replaced ones.
+The task lifecycle proceeds as follows. The Controller's task scheduler runs on a configurable cron interval and examines each table's `taskConfig` section to determine which tasks are due. When a task is due, the Controller creates a task entry in ZooKeeper and assigns it to an available Minion worker. The Minion worker reads the source segments from deep storage, applies the compaction logic, writes the output segments back to deep storage and reports completion to the Controller. The Controller then updates the segment registry in ZooKeeper and the Servers receive notification to load the new compacted segments and unload the replaced ones.
 
----
 
 ## Why Segment Count Matters
 
@@ -124,9 +121,8 @@ flowchart TB
     after --> delta
 ```
 
-The per-segment overhead cost is roughly fixed regardless of how many rows the segment contains. A segment with 100 rows costs nearly as much to open, scan the index, and return a partial result as a segment with 5,000 rows. This means the cost of fragmentation is not proportional to the number of extra rows. It is proportional to the number of extra segments. Compaction recovers that overhead without changing the data.
+The per-segment overhead cost is roughly fixed regardless of how many rows the segment contains. A segment with 100 rows costs nearly as much to open, scan the index and return a partial result as a segment with 5,000 rows. This means the cost of fragmentation is not proportional to the number of extra rows. It is proportional to the number of extra segments. Compaction recovers that overhead without changing the data.
 
----
 
 ## Step 1: Measure the Current Segment Count
 
@@ -136,7 +132,7 @@ Before configuring any compaction, establish the baseline. The Controller REST A
 curl -s http://localhost:9000/segments/trip_events | python3 -m json.tool
 ```
 
-This endpoint returns the list of all segments for the `trip_events` table, organized by table type. Count the entries in the `REALTIME` array. This is the number of completed segments currently held by the cluster. Consuming segments (those still being written to) are listed separately and are not candidates for compaction until they complete.
+This endpoint returns the list of all segments for the `trip_events` table organized by table type. Count the entries in the `REALTIME` array. This is the number of completed segments currently held by the cluster. Consuming segments (those still being written to) are listed separately and are not candidates for compaction until they complete.
 
 To get a precise count without parsing the full JSON:
 
@@ -147,9 +143,8 @@ curl -s "http://localhost:9000/segments/trip_events?type=REALTIME" \
 
 Record the result in the measurement table at the end of this lab.
 
-You can also inspect segments visually. Navigate to **http://localhost:9000**, click **Tables** in the left sidebar, and find `trip_events_REALTIME`. Click the table name to open the detail view, then select the **Segments** tab. The segment list shows each segment's name, status (`ONLINE`), start time, end time, and row count. Segments with low row counts relative to the flush threshold are the primary candidates for compaction.
+You can also inspect segments visually. Navigate to **http://localhost:9000**, click **Tables** in the left sidebar and find `trip_events_REALTIME`. Click the table name to open the detail view, then select the **Segments** tab. The segment list shows each segment's name, status (`ONLINE`), start time, end time and row count. Segments with low row counts relative to the flush threshold are the primary candidates for compaction.
 
----
 
 ## Step 2: Measure the Query Baseline
 
@@ -180,7 +175,6 @@ done
 
 Record the median values in the measurement table at Step 10.
 
----
 
 ## Step 3: Verify Minion Health
 
@@ -225,7 +219,6 @@ docker compose up -d pinot-minion
 
 Wait approximately 30 seconds for the Minion process to start and register with ZooKeeper before proceeding.
 
----
 
 ## Step 4: Configure a MergeRollupTask in the Table Config
 
@@ -239,7 +232,7 @@ The following configuration instructs the Controller to run a MergeRollupTask ag
 curl -s http://localhost:9000/tables/trip_events/tableConfigs | python3 -m json.tool > /tmp/trip_events_config.json
 ```
 
-**Add the task configuration block.** Open the Controller UI at **http://localhost:9000**, navigate to **Tables**, click on `trip_events_REALTIME`, and select the **Edit** action. Alternatively, prepare the update directly via the REST API.
+**Add the task configuration block.** Open the Controller UI at **http://localhost:9000**, navigate to **Tables**, click on `trip_events_REALTIME` and select the **Edit** action. Alternatively, prepare the update directly via the REST API.
 
 The `task` block to add to the realtime table configuration:
 
@@ -283,7 +276,6 @@ curl -s http://localhost:9000/tables/trip_events/tableConfigs | \
 
 The response should contain the `MergeRollupTask` configuration block exactly as submitted.
 
----
 
 ## Step 5: Trigger a Manual MergeRollupTask
 
@@ -307,7 +299,6 @@ The response contains the task ID assigned by the Controller. Record this task I
 
 If the response returns an empty object `{}`, it means no segments were eligible for compaction. This occurs when all segments are younger than the `bufferTimePeriod` configured in Step 4. In that case, temporarily reduce `bufferTimePeriod` to `1h` in the task config and resubmit.
 
----
 
 ## Step 6: Monitor Task Progress
 
@@ -344,7 +335,7 @@ flowchart LR
 
 **Monitor via the Controller UI:**
 
-Navigate to **http://localhost:9000** and click **Tasks** in the left sidebar. The Tasks view displays each submitted task with its current state, the table it targets, the number of sub-tasks created, and the completion count. Refresh the page periodically to observe the task advancing through its states. Sub-tasks are created by the Controller when a single MergeRollupTask is split into parallel workers. Each sub-task handles a subset of the eligible segments.
+Navigate to **http://localhost:9000** and click **Tasks** in the left sidebar. The Tasks view displays each submitted task with its current state, the table it targets, the number of sub-tasks created and the completion count. Refresh the page periodically to observe the task advancing through its states. Sub-tasks are created by the Controller when a single MergeRollupTask is split into parallel workers. Each sub-task handles a subset of the eligible segments.
 
 **Read Minion logs for detailed progress:**
 
@@ -352,11 +343,10 @@ Navigate to **http://localhost:9000** and click **Tasks** in the left sidebar. T
 docker logs pinot-minion --tail=50 --follow
 ```
 
-Look for log lines containing `MergeRollupTaskExecutor` and `Segment`. A successful execution will produce log entries confirming how many input segments were consumed, how many output segments were produced, and the time spent in each phase of the compaction.
+Look for log lines containing `MergeRollupTaskExecutor` and `Segment`. A successful execution will produce log entries confirming how many input segments were consumed, how many output segments were produced and the time spent in each phase of the compaction.
 
 A typical compaction run against a small local cluster completes in 30 to 120 seconds depending on total data volume.
 
----
 
 ## Step 7: Verify Compaction Results
 
@@ -373,7 +363,7 @@ The count should be substantially lower than the pre-compaction baseline. In a c
 
 **Inspect the new segment sizes in the Controller UI:**
 
-Return to **http://localhost:9000**, navigate to `trip_events_REALTIME`, and select the **Segments** tab. The new compacted segments should have row counts approaching the `maxNumRecordsPerSegment` value you configured, while the old small segments should no longer appear.
+Return to **http://localhost:9000**, navigate to `trip_events_REALTIME` and select the **Segments** tab. The new compacted segments should have row counts approaching the `maxNumRecordsPerSegment` value you configured, while the old small segments should no longer appear.
 
 **Run the same KPI query and record the new statistics:**
 
@@ -386,11 +376,10 @@ done
 
 Record the median values in the measurement table below.
 
----
 
 ## Step 8: Measurement Table — Before and After Compaction
 
-Complete this table using the values you recorded in Steps 1, 2, and 7.
+Complete this table using the values you recorded in Steps 1, 2 and 7.
 
 | Metric | Before Compaction | After Compaction | Improvement |
 |--------|:-----------------:|:----------------:|:-----------:|
@@ -415,7 +404,6 @@ print(f'Total rows across all segments: {total}')
 
 The improvement column should show a large positive value for `numSegmentsQueried` and a corresponding improvement in `timeUsedMs`. The total row count and `numDocsScanned` should remain identical. Compaction consolidates segments without changing the underlying data.
 
----
 
 ## Step 9: Configure a PurgeTask for Data Retention
 
@@ -447,7 +435,6 @@ curl -X POST \
 
 Because the sample dataset in this lab uses fixed timestamps rather than live event times, the PurgeTask may not delete any rows if all events fall within the 7-day retention window. In that scenario, observe the task completing with zero rows deleted — this is the correct outcome and confirms that the purge predicate is working as designed.
 
----
 
 ## Task Configuration Reference
 
@@ -461,18 +448,16 @@ The following table covers all Minion task types available in a standard Pinot d
 | `SegmentGenerationAndPushTask` | Generates Pinot segments from files in an external data source (S3, HDFS, GCS) and pushes them to the cluster | Batch ingestion pipelines where data arrives as files; backfill operations | `inputDirURI`, `outputDirURI`, `recordReaderSpec`, `tableSpec` |
 | `SegmentRefreshTask` | Refreshes segments that need index rebuilds after a table configuration change | When a new index type is added to an existing table and existing segments must be rebuilt to use it | Inherits from table config; triggered via `POST /segments/{tableName}/reload` |
 
----
 
 ## Reflection Prompts
 
-1. This lab configured `mergeType: concat` for the MergeRollupTask, which preserves every original row in the output segments. The alternative, `rollup`, pre-aggregates metric columns by dimension key during compaction. Under what data modeling conditions would `rollup` be appropriate, and what would you lose by choosing it over `concat`?
+1. This lab configured `mergeType: concat` for the MergeRollupTask, which preserves every original row in the output segments. The alternative, `rollup`, pre-aggregates metric columns by dimension key during compaction. Under what data modeling conditions would `rollup` be appropriate and what would you lose by choosing it over `concat`?
 
 2. The `bufferTimePeriod` setting in both the MergeRollupTask and PurgeTask configuration prevents very recent segments from being processed. Explain the operational reason for this buffer and describe the query correctness risk that would emerge if it were set to zero.
 
 3. After compaction, `numSegmentsQueried` decreased significantly, but `numDocsScanned` remained approximately the same. A colleague interprets this as meaning that compaction did not improve performance because the same number of rows were read. Explain why this interpretation is incorrect and what the reduction in `numSegmentsQueried` actually contributes to query latency.
 
-4. The MergeRollupTask processed segments from the `trip_events` realtime table. Realtime tables continuously generate new segments as Kafka events arrive. Design a compaction schedule — specifying `bucketTimePeriod`, `bufferTimePeriod`, and scheduling frequency — that keeps segment count below 100 for a table receiving 10,000 events per hour with a flush threshold of 50,000 rows.
+4. The MergeRollupTask processed segments from the `trip_events` realtime table. Realtime tables continuously generate new segments as Kafka events arrive. Design a compaction schedule — specifying `bucketTimePeriod`, `bufferTimePeriod` and scheduling frequency — that keeps segment count below 100 for a table receiving 10,000 events per hour with a flush threshold of 50,000 rows.
 
----
 
 [Previous: Lab 8 — SLO and Incident Drill](lab-08-slo-incident.md) | [Next: Lab 12 — SQL Optimization Workshop](lab-12-sql-optimization.md)

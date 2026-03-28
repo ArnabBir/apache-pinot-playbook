@@ -111,11 +111,11 @@ Every rule should be explicitly defined. Default-allow rules between subnets def
 
 ### Service Mesh Integration
 
-For organizations using a service mesh (Istio, Linkerd, Consul Connect), registering Pinot components as mesh services provides automatic mutual TLS between all components, fine-grained traffic policies that restrict which services can communicate, and request-level observability that logs every inter-component API call.
+For organizations using a service mesh (Istio, Linkerd, Consul Connect), registering Pinot components as mesh services provides automatic mutual TLS between all components, fine-grained traffic policies that restrict which services can communicate and request-level observability that logs every inter-component API call.
 
 ### API Gateway Patterns
 
-For consumer-facing endpoints, place an API gateway between the consumer and the analytics API service. The API gateway provides rate limiting to prevent any single consumer from overwhelming the Pinot cluster, API key management with per-consumer quotas and usage tracking, and request/response logging for audit purposes. Do not use the API gateway as a substitute for application-level authentication and authorization.
+For consumer-facing endpoints, place an API gateway between the consumer and the analytics API service. The API gateway provides rate limiting to prevent any single consumer from overwhelming the Pinot cluster, API key management with per-consumer quotas and usage tracking and request/response logging for audit purposes. Do not use the API gateway as a substitute for application-level authentication and authorization.
 
 
 ## Layer 2: TLS Configuration
@@ -224,7 +224,7 @@ async def get_kpis(
 
 ### Service-to-Service Authentication
 
-When the analytics API service communicates with the Pinot broker, it should use a dedicated service account rather than passing through the end user's credentials. This pattern achieves credential isolation so that end user credentials never reach Pinot, centralizes access control enforcement at the API layer where business-level rules apply, and enables connection pooling so the analytics API can maintain a pool of authenticated connections.
+When the analytics API service communicates with the Pinot broker, it should use a dedicated service account rather than passing through the end user's credentials. This pattern achieves credential isolation so that end user credentials never reach Pinot, centralizes access control enforcement at the API layer where business-level rules apply and enables connection pooling so the analytics API can maintain a pool of authenticated connections.
 
 
 ## Layer 4: Authorization

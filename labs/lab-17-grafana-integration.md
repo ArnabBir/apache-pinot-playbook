@@ -2,16 +2,15 @@
 
 ## Overview
 
-Apache Pinot exposes a standard HTTP SQL API at port 8099. Any tool that can issue an HTTP POST request and parse a JSON response can query Pinot directly. Grafana is the most widely deployed visualization layer in this category, and the combination of Pinot's sub-second aggregation latency with Grafana's time-series rendering capabilities produces dashboards that update in near real time from event streams.
+Apache Pinot exposes a standard HTTP SQL API at port 8099. Any tool that can issue an HTTP POST request and parse a JSON response can query Pinot directly. Grafana is the most widely deployed visualization layer in this category and the combination of Pinot's sub-second aggregation latency with Grafana's time-series rendering capabilities produces dashboards that update in near real time from event streams.
 
-This lab connects a Grafana instance to the Pinot cluster, builds a six-panel operational dashboard for the ride-hailing data set, and teaches the query translation patterns that make Grafana dashboards performant rather than expensive. The gap between a well-designed Pinot-backed dashboard and a poorly designed one is not visual. It is entirely in the SQL, specifically in how time predicates, aggregation dimensions, and query granularity are specified.
+This lab connects a Grafana instance to the Pinot cluster, builds a six-panel operational dashboard for the ride-hailing data set and teaches the query translation patterns that make Grafana dashboards performant rather than expensive. The gap between a well-designed Pinot-backed dashboard and a poorly designed one is not visual. It is entirely in the SQL, specifically in how time predicates, aggregation dimensions and query granularity are specified.
 
-By the end of this lab you will have a working dashboard with six panels spanning stat panels, time-series charts, bar charts, table panels, heat maps, and a data freshness gauge. You will also have a reusable query design reference for translating common dashboard requirements into optimized Pinot SQL.
+By the end of this lab you will have a working dashboard with six panels spanning stat panels, time-series charts, bar charts, table panels, heat maps and a data freshness gauge. You will also have a reusable query design reference for translating common dashboard requirements into optimized Pinot SQL.
 
 > [!NOTE]
-> Labs 1 through 5 must be complete and data must be present in `trip_events`, `trip_state`, and `merchants_dim` before building the dashboard panels.
+> Labs 1 through 5 must be complete and data must be present in `trip_events`, `trip_state` and `merchants_dim` before building the dashboard panels.
 
----
 
 ## Learning Objectives
 
@@ -24,7 +23,6 @@ By the end of this lab you will have a working dashboard with six panels spannin
 | Create a parameterized dashboard variable | The `$city` dropdown is populated from a Pinot query and filters all relevant panels simultaneously |
 | Measure dashboard query latency | You have recorded `timeUsedMs` for all six panel queries and can identify which ones need index optimization |
 
----
 
 ## The Dashboard Architecture
 
@@ -75,7 +73,6 @@ flowchart TB
 
 Each panel in the dashboard issues an independent SQL query. There is no query batching or cursor-based streaming. Grafana fires all visible panel queries simultaneously when the dashboard loads or the time range changes. This means a dashboard with six panels generates six concurrent requests against the Pinot broker. Designing each query for low latency is not a nicety. It is required for the dashboard to feel responsive.
 
----
 
 ## Grafana Setup
 
@@ -167,21 +164,19 @@ Grafana connects to the Pinot broker from within the Docker network using the se
 
 Expected test result: `Data source connected and labels found.`
 
----
 
 ## The Six Dashboard Panels
 
 Create a new dashboard by navigating to **Dashboards → New Dashboard → Add visualization**. For each panel, select `Apache Pinot` as the data source and configure the query as described below.
 
----
 
 ### Panel 1: Live Trip Metrics (KPI Stat Row)
 
 **Visualization type:** Stat
 
-This panel provides the three most important operational numbers for the last hour: total trips, total gross merchandise value, and cancellation rate. Stat panels display a single large number with optional trend sparklines.
+This panel provides the three most important operational numbers for the last hour: total trips, total gross merchandise value and cancellation rate. Stat panels display a single large number with optional trend sparklines.
 
-Add three queries within the same panel, labeling them A, B, and C.
+Add three queries within the same panel, labeling them A, B and C.
 
 **Query A — Total trips last hour**
 
@@ -219,11 +214,10 @@ WHERE event_time_ms >= $__from
 
 Grafana resolves `$__from` and `$__to` to Unix epoch milliseconds when the panel renders, matching Pinot's `event_time_ms` column format. Set the panel time range to **Last 1 hour** using the dashboard time picker.
 
-Set the panel title to `Live Trip Metrics`. Under Field settings, set the unit for Query A to `short`, Query B to `currency: USD`, and Query C to `percent (0-100)`.
+Set the panel title to `Live Trip Metrics`. Under Field settings, set the unit for Query A to `short`, Query B to `currency: USD` and Query C to `percent (0-100)`.
 
 **Expected latency target:** Under 50ms for each of the three queries, given that `event_time_ms` has a range index and the time window prunes most segments.
 
----
 
 ### Panel 2: GMV Over Time (Time Series)
 
@@ -248,9 +242,8 @@ Under Field overrides, set the `gmv` field unit to `currency: USD` and display n
 
 **Why this query is efficient.** The `last_event_minute_bucket_ms` column is a pre-computed five-minute floor of the event timestamp, calculated at ingestion time. Grouping on this column avoids a `DATETIMECONVERT` expression in the GROUP BY, which Pinot cannot use a sorted index for. Pre-computing time buckets at ingest time is the recommended pattern for time-series panels.
 
-**Expected latency target:** Under 100ms. The range index on `event_time_ms` prunes segments aggressively, and the `last_event_minute_bucket_ms` GROUP BY aggregates a bounded number of rows per five-minute bucket.
+**Expected latency target:** Under 100ms. The range index on `event_time_ms` prunes segments aggressively and the `last_event_minute_bucket_ms` GROUP BY aggregates a bounded number of rows per five-minute bucket.
 
----
 
 ### Panel 3: Top Cities by Revenue (Bar Chart)
 
@@ -275,11 +268,10 @@ LIMIT 10
 
 The `AND city = '$city'` clause applies the dashboard variable filter defined in the Variable Setup section. When `$city` is set to `All` or is unset, remove this clause or use a Grafana conditional syntax depending on the plugin version. The cleanest approach for the Infinity plugin is to define two separate query variants and toggle them with the variable state.
 
-Set the panel title to `Top Cities by Revenue`. Set the X axis to `city`, the Y axis to `total_revenue` with unit `currency: USD`, and enable value labels on bars.
+Set the panel title to `Top Cities by Revenue`. Set the X axis to `city`, the Y axis to `total_revenue` with unit `currency: USD` and enable value labels on bars.
 
 **Expected latency target:** Under 80ms. The inverted index on `city` and range index on `event_time_ms` make this an efficient compound filter and aggregation.
 
----
 
 ### Panel 4: Active Trips by Status (Table Panel)
 
@@ -300,11 +292,10 @@ ORDER BY trip_count DESC
 
 This query does not use a time filter because `trip_state` stores current state, not historical events. The upsert semantics guarantee that each `trip_id` appears exactly once in the latest-state view. A time filter would incorrectly exclude trips that started outside the window but are still active.
 
-Set the panel title to `Active Trips by Status`. In the table column settings, set `trip_count` to display name `Trips`, `fare_total` to `Total Fare (USD)`, and `avg_distance_km` to `Avg Distance (km)`. Apply a threshold color to `trip_count` — green for below 100 active trips, yellow for 100 to 200, and red for above 200, representing capacity indicators.
+Set the panel title to `Active Trips by Status`. In the table column settings, set `trip_count` to display name `Trips`, `fare_total` to `Total Fare (USD)` and `avg_distance_km` to `Avg Distance (km)`. Apply a threshold color to `trip_count` — green for below 100 active trips, yellow for 100 to 200 and red for above 200, representing capacity indicators.
 
 **Expected latency target:** Under 30ms. This query has no time predicate to prune segments, but the table is compact and the inverted index on `status` handles the GROUP BY efficiently with star-tree acceleration if configured.
 
----
 
 ### Panel 5: Hourly Trip Volume by Day (Heat Map)
 
@@ -344,13 +335,12 @@ Set the panel title to `Hourly Trip Volume by Day`. Configure the heatmap X axis
 
 **Expected latency target:** Under 150ms. The DATETIMECONVERT expression involves a function evaluation on every scanned row, which prevents range index acceleration. This is acceptable for this panel because it targets a broad time range and the heat map naturally tolerates slightly higher latency than KPI panels.
 
----
 
 ### Panel 6: Data Freshness Gauge
 
 **Visualization type:** Gauge
 
-This panel is the most operationally critical panel on the dashboard. It measures the lag between the most recent event in `trip_state` and the current wall-clock time, expressed in seconds. A rising lag indicates ingestion problems: Kafka consumer lag, server overload, or a paused consuming segment.
+This panel is the most operationally critical panel on the dashboard. It measures the lag between the most recent event in `trip_state` and the current wall-clock time, expressed in seconds. A rising lag indicates ingestion problems: Kafka consumer lag, server overload or a paused consuming segment.
 
 ```sql
 SELECT
@@ -358,7 +348,7 @@ SELECT
 FROM trip_state
 ```
 
-Set the panel title to `Data Freshness`. Configure the gauge minimum as 0 and maximum as 300. Apply threshold bands: 0 to 30 seconds is green (healthy), 30 to 60 seconds is yellow (degraded), and above 60 seconds is red (SLO breach).
+Set the panel title to `Data Freshness`. Configure the gauge minimum as 0 and maximum as 300. Apply threshold bands: 0 to 30 seconds is green (healthy), 30 to 60 seconds is yellow (degraded) and above 60 seconds is red (SLO breach).
 
 Under the gauge display options, enable the threshold color markers and set the value unit to `seconds`.
 
@@ -366,7 +356,6 @@ This query does not accept a time variable because it measures current lag. The 
 
 **Expected latency target:** Under 20ms. `MAX(last_event_time_ms)` against an upsert table with a range index resolves quickly. If latency exceeds 100ms for this query, the Pinot server itself may be overloaded. The freshness gauge latency is itself a health signal.
 
----
 
 ## Grafana Variable Setup
 
@@ -391,7 +380,6 @@ The `$city` variable will appear as a dropdown at the top of the dashboard. When
 
 **Verify the variable is working.** Select a specific city from the dropdown. The `Top Cities by Revenue` panel should update to show only that city's data. The `Data Freshness` gauge should not change.
 
----
 
 ## Dashboard JSON Export
 
@@ -412,9 +400,8 @@ curl -s \
 
 The dashboard UID appears in the browser URL when the dashboard is open: `http://localhost:3000/d/{uid}/dashboard-title`. Substitute the actual UID in the curl command.
 
-A committed `grafana_dashboard.json` file allows teammates to import the dashboard into their own Grafana instances without manual panel recreation. Treat this file as infrastructure code — include it in code review, version it alongside schema changes, and update it whenever panel queries change.
+A committed `grafana_dashboard.json` file allows teammates to import the dashboard into their own Grafana instances without manual panel recreation. Treat this file as infrastructure code — include it in code review, version it alongside schema changes and update it whenever panel queries change.
 
----
 
 ## Query Design Principles for Dashboards
 
@@ -431,11 +418,10 @@ The following table captures the recurring translation patterns between dashboar
 | Heat map by hour and day | Pre-computed `last_event_hour` and `last_event_day` columns | Avoids EXTRACT and DATETIMECONVERT functions at query time; GROUP BY on integer columns is faster than on function results |
 | Cancellation rate | `100.0 * SUM(CASE WHEN event_type = 'cancelled' THEN 1 ELSE 0 END) / COUNT(*)` | Single-pass aggregation computes numerator and denominator together; avoids a subquery or CTE |
 
----
 
 ## Latency Considerations for Dashboards
 
-Dashboard panels execute queries on every render, time range change, and variable selection change. The table below defines the relationship between panel refresh frequency, acceptable query latency, and the time predicate structure that makes that latency achievable.
+Dashboard panels execute queries on every render, time range change and variable selection change. The table below defines the relationship between panel refresh frequency, acceptable query latency and the time predicate structure that makes that latency achievable.
 
 | Refresh Interval | Latency Budget per Panel | Required Time Predicate Pattern | Index Requirements |
 |:----------------:|:------------------------:|--------------------------------|-------------------|
@@ -445,24 +431,22 @@ Dashboard panels execute queries on every render, time range change, and variabl
 | 15 minutes | Under 200ms | `WHERE timestamp >= $__from AND timestamp <= $__to` with time range up to 7 days | Segment pruning covers most of the budget; inverted index on GROUP BY dimensions |
 | 1 hour | Under 500ms | Full table scan acceptable with indexed aggregation dimensions | Star-tree required for aggregation-heavy queries at this range |
 
-The most important constraint is the 5-second refresh case. A query latency of 20ms leaves almost no margin for network overhead, Grafana rendering, and plugin processing. Achieving this requires pre-computed aggregation columns or a star-tree index. Any query at this refresh rate that performs a full segment scan is at risk of causing visible lag in the dashboard.
+The most important constraint is the 5-second refresh case. A query latency of 20ms leaves almost no margin for network overhead, Grafana rendering and plugin processing. Achieving this requires pre-computed aggregation columns or a star-tree index. Any query at this refresh rate that performs a full segment scan is at risk of causing visible lag in the dashboard.
 
 The Data Freshness gauge panel in this lab operates at a 30-second refresh rate and targets under 20ms. It achieves this because `MAX(last_event_time_ms)` can be resolved from segment-level metadata in many cases without scanning rows.
 
----
 
 ## Reflection Prompts
 
 1. The GMV Over Time panel (Panel 2) uses a pre-computed `last_event_minute_bucket_ms` column for time bucketing instead of `DATETIMECONVERT(event_time_ms, ...)` in the GROUP BY. Explain why the pre-computed column approach produces lower query latency and describe what would need to change in the ingestion pipeline to switch from a DATETIMECONVERT approach to a pre-computed column approach.
 
-2. The Active Trips by Status panel (Panel 4) intentionally omits the dashboard time range filter from its query. A colleague insists on adding `WHERE last_event_time_ms >= $__from AND last_event_time_ms <= $__to` to make it "consistent with the other panels." What data accuracy problem does this change introduce, and how would you explain the omission to the colleague?
+2. The Active Trips by Status panel (Panel 4) intentionally omits the dashboard time range filter from its query. A colleague insists on adding `WHERE last_event_time_ms >= $__from AND last_event_time_ms <= $__to` to make it "consistent with the other panels." What data accuracy problem does this change introduce and how would you explain the omission to the colleague?
 
 3. A new panel requirement arrives: show the p99 query latency for the last 24 hours, bucketed by hour. Pinot's SQL does not natively support `PERCENTILE` over time windows in the same way that a window function would. Describe at least two approaches for serving this dashboard panel from Pinot, with their respective trade-offs.
 
 4. The `$city` dashboard variable is populated by `SELECT DISTINCT city FROM trip_events ORDER BY city`. As the dataset grows to billions of rows, this query begins taking over 500ms. Propose a query redesign or data model change that keeps the variable population query under 50ms regardless of data volume.
 
-5. The Data Freshness gauge shows 0 seconds of lag even though you know the Kafka producer has been paused for 10 minutes. What does this tell you about how Pinot computes `MAX(last_event_time_ms)`, and how would you modify the query to detect a paused producer more reliably?
+5. The Data Freshness gauge shows 0 seconds of lag even though you know the Kafka producer has been paused for 10 minutes. What does this tell you about how Pinot computes `MAX(last_event_time_ms)` and how would you modify the query to detect a paused producer more reliably?
 
----
 
 [Previous: Lab 16 — Star-Tree Index Design Workshop](lab-16-star-tree-workshop.md) | [Next: Lab 1 — Local Cluster Setup](lab-01-local-cluster.md)

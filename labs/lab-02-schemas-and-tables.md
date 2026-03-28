@@ -2,29 +2,27 @@
 
 ## Overview
 
-This lab introduces the two foundational configuration artifacts in Apache Pinot: the **schema** and the **table configuration**. You will upload three distinct tables that represent the canonical data modeling patterns — an append-only realtime fact table, a upsert-enabled state table, and a batch-loaded offline dimension table. By the end, you will be able to navigate the schema and table relationship in the Controller UI, query the REST API for configuration details, and articulate why each modeling choice was made.
+This lab introduces the two foundational configuration artifacts in Apache Pinot: the **schema** and the **table configuration**. You will upload three distinct tables that represent the canonical data modeling patterns — an append-only realtime fact table, a upsert-enabled state table and a batch-loaded offline dimension table. By the end, you will be able to navigate the schema and table relationship in the Controller UI, query the REST API for configuration details and articulate why each modeling choice was made.
 
 > [!IMPORTANT]
 > The Kafka topics created in this lab are prerequisites for Lab 3. Complete every step in order.
 
----
 
 ## Learning Objectives
 
 | Objective | Success Criterion |
 |-----------|-------------------|
-| Understand schema field categories | You can classify any column as Dimension, Metric, DateTime, or Complex without reference |
+| Understand schema field categories | You can classify any column as Dimension, Metric, DateTime or Complex without reference |
 | Understand the schema–table relationship | You can explain why a schema and table config are separate artifacts |
 | Create Kafka topics for realtime ingestion | `kafka-topics --list` returns both `trip-events` and `trip-state` |
 | Upload schemas and table configurations | All three tables appear in the Controller UI under Tables |
 | Distinguish table types | You can explain the behavioral difference between REALTIME and OFFLINE tables |
 | Interpret upsert configuration | You can explain what `primaryKeyColumns` enables and why `trip_state` requires it |
 
----
 
 ## The Schema–Table Relationship
 
-Before running any command, study this diagram. It captures the most important structural relationship in Pinot configuration. The schema defines the data contract — what columns exist, what types they carry, and what role each column plays. The table configuration consumes that contract and extends it with operational behavior — how data enters, how it is indexed, how queries are routed, and when data expires.
+Before running any command, study this diagram. It captures the most important structural relationship in Pinot configuration. The schema defines the data contract — what columns exist, what types they carry and what role each column plays. The table configuration consumes that contract and extends it with operational behavior — how data enters, how it is indexed, how queries are routed and when data expires.
 
 ```mermaid
 flowchart TB
@@ -53,9 +51,8 @@ flowchart TB
     metric --> idx
 ```
 
-**What you are looking at.** The schema is immutable from a table's perspective — the table config references it by name. Adding a new column requires updating the schema first, then reloading affected segments. The table config is where all operational decisions live: retention, indexing strategy, ingestion topology, and routing behavior.
+**What you are looking at.** The schema is immutable from a table's perspective — the table config references it by name. Adding a new column requires updating the schema first, then reloading affected segments. The table config is where all operational decisions live: retention, indexing strategy, ingestion topology and routing behavior.
 
----
 
 ## The Three Data Models
 
@@ -90,7 +87,6 @@ flowchart LR
 | `trip_state` | REALTIME | Upsert state | `trip_id` | Current status queries — what is the latest state of this trip |
 | `merchants_dim` | OFFLINE | Dimension lookup | `merchant_id` | Reference data joined against fact tables |
 
----
 
 ## Step-by-Step Instructions
 
@@ -102,7 +98,6 @@ docker compose ps
 
 All containers must show `running` before continuing. If any container is stopped, return to Lab 1 and diagnose before proceeding.
 
----
 
 ### Step 2 — Create the Kafka Topics
 
@@ -136,7 +131,6 @@ trip-events
 trip-state
 ```
 
----
 
 ### Step 3 — Upload Schemas and Table Configurations
 
@@ -169,7 +163,6 @@ Created table: merchants_dim_OFFLINE
 All tables verified.
 ```
 
----
 
 ### Step 4 — Load the Merchant Dimension Data
 
@@ -181,9 +174,8 @@ bash scripts/load_merchants.sh
 
 This script generates a segment from `data/merchants.csv` and pushes it to the Controller, which assigns it to a Server and marks it ONLINE.
 
-After the push completes, the `merchants_dim` table will contain the full merchant reference dataset — 200 merchant records with names, cities, categories, and creation dates.
+After the push completes, the `merchants_dim` table will contain the full merchant reference dataset — 200 merchant records with names, cities, categories and creation dates.
 
----
 
 ### Step 5 — Verify the Tables in the Controller UI
 
@@ -191,7 +183,7 @@ Open **http://localhost:9000** in your browser and navigate to Tables in the lef
 
 **trip_events table**
 
-Click `trip_events_REALTIME`. Examine the Overview tab. You will see the table type, the referenced schema name, tenant assignment, and segment count. Navigate to the Stream Config section — it shows the Kafka topic name, consumer type, broker address, and the decoder class that converts raw Kafka bytes into Pinot rows. Navigate to the Segments tab. You will see consuming segments — these are actively ingesting from Kafka and are immediately queryable even before they flush to disk.
+Click `trip_events_REALTIME`. Examine the Overview tab. You will see the table type, the referenced schema name, tenant assignment and segment count. Navigate to the Stream Config section — it shows the Kafka topic name, consumer type, broker address and the decoder class that converts raw Kafka bytes into Pinot rows. Navigate to the Segments tab. You will see consuming segments — these are actively ingesting from Kafka and are immediately queryable even before they flush to disk.
 
 **trip_state table**
 
@@ -199,9 +191,8 @@ Click `trip_state_REALTIME`. Examine the Upsert Config section — it shows `mod
 
 **merchants_dim table**
 
-Click `merchants_dim_OFFLINE`. Note the absence of any stream configuration — this table is populated exclusively through batch pushes. Navigate to the Segments tab. The batch-pushed segment appears here with its row count, size, and time range. Unlike consuming segments, offline segments are immediately immutable once pushed.
+Click `merchants_dim_OFFLINE`. Note the absence of any stream configuration — this table is populated exclusively through batch pushes. Navigate to the Segments tab. The batch-pushed segment appears here with its row count, size and time range. Unlike consuming segments, offline segments are immediately immutable once pushed.
 
----
 
 ### Step 6 — Inspect Schemas via REST API
 
@@ -220,9 +211,8 @@ curl -s http://localhost:9000/tables/trip_state_REALTIME | python3 -m json.tool 
 
 **What to look for in the schema response:**
 
-The response contains three top-level arrays: `dimensionFieldSpecs`, `metricFieldSpecs`, and `dateTimeFieldSpecs`. Each entry in `dimensionFieldSpecs` carries a `name` and `dataType`. Each entry in `metricFieldSpecs` carries the same structure plus the implicit guarantee that Pinot will treat it as aggregatable. The `dateTimeFieldSpecs` entry carries additional fields — `format` and `granularity` — that inform time partitioning and segment boundary computation.
+The response contains three top-level arrays: `dimensionFieldSpecs`, `metricFieldSpecs` and `dateTimeFieldSpecs`. Each entry in `dimensionFieldSpecs` carries a `name` and `dataType`. Each entry in `metricFieldSpecs` carries the same structure plus the implicit guarantee that Pinot will treat it as aggregatable. The `dateTimeFieldSpecs` entry carries additional fields — `format` and `granularity` — that inform time partitioning and segment boundary computation.
 
----
 
 ### Step 7 — Compare Schema Representations
 
@@ -238,13 +228,12 @@ This repository uses two parallel schema representations for the same events. Un
 
 The Pinot schema is consumed by the Controller at table creation time. The JSON Schema is consumed by producers at event publish time. Both must agree on field names and types — drift between them causes silent data quality failures.
 
----
 
 ## Key Concepts Reference
 
 | Concept | Definition |
 |---------|------------|
-| Schema | Defines column names, types, and roles — the data contract that the table configuration references |
+| Schema | Defines column names, types and roles — the data contract that the table configuration references |
 | Dimension field | A textual or categorical column used in `WHERE` and `GROUP BY` clauses |
 | Metric field | An aggregatable numeric column operated on by `SUM`, `AVG`, `COUNT`, `MIN`, `MAX` |
 | DateTime field | The temporal anchor column used for time partitioning and time-range query acceleration |
@@ -255,10 +244,9 @@ The Pinot schema is consumed by the Controller at table creation time. The JSON 
 | Range index | A data structure that accelerates range predicates on numeric and temporal columns |
 | Bloom filter | A probabilistic structure that answers "does this value exist in this segment" — eliminates segments containing none of the queried values |
 | Star-tree index | A pre-aggregated multi-dimensional index that materializes common aggregation patterns — delivers sub-millisecond aggregation latency |
-| Upsert | A write operation that updates the existing record if the primary key already exists, or inserts a new record if it does not |
+| Upsert | A write operation that updates the existing record if the primary key already exists or inserts a new record if it does not |
 | strictReplicaGroup | A routing strategy that always sends queries for the same partition key to the same server replica — required for correctness in upsert tables |
 
----
 
 ## Table Configuration Anatomy
 
@@ -318,9 +306,8 @@ Study this annotated table configuration excerpt. Every section influences a dis
 | `quota` | Maximum query throughput and storage allocation |
 | `routing` | How the broker distributes queries across server replicas |
 | `queryConfig` | Per-table query timeout |
-| `ingestionConfig` | Kafka topic, consumer type, decoder, and flush thresholds |
+| `ingestionConfig` | Kafka topic, consumer type, decoder and flush thresholds |
 
----
 
 ## Reflection Prompts
 
@@ -334,6 +321,5 @@ Answer these questions before proceeding to Lab 3.
 
 4. The `merchants_dim` table has a star-tree index configured but the `trip_events` table does not. What property of the merchants dimension workload justifies the overhead of building and maintaining a star-tree?
 
----
 
 [Previous: Lab 1 — Local Cluster](lab-01-local-cluster.md) | [Next: Lab 3 — Stream Ingestion](lab-03-stream-ingestion.md)

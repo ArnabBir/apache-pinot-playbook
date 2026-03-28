@@ -124,7 +124,7 @@ During segment creation, Pinot hashes every value in the configured column throu
 
 The default false positive probability (FPP) in Pinot is 0.05 (5%). You can tune this lower for better accuracy at the cost of a larger bit array. An FPP of 0.01 (1%) is common in production. Lower FPP means fewer unnecessary segment scans but more storage per Bloom filter.
 
-Bloom filters are ideal for point lookups on high-cardinality ID columns such as `WHERE trip_id = 'abc-123'`, for lookup-heavy workloads where most segments will not contain the queried value, and for columns where building a full inverted index would be too expensive due to cardinality.
+Bloom filters are ideal for point lookups on high-cardinality ID columns such as `WHERE trip_id = 'abc-123'`, for lookup-heavy workloads where most segments will not contain the queried value and for columns where building a full inverted index would be too expensive due to cardinality.
 
 **Configuration example**
 
@@ -428,7 +428,7 @@ Every index provides query performance benefits at a cost. Understanding these c
 
 ### Build Time Impact
 
-Index construction happens during segment creation (for offline tables) and during segment completion and conversion (for realtime tables). The more indexes configured, the longer each segment takes to build. This directly affects realtime ingestion latency (if segment completion takes too long, consuming segments accumulate and freshness degrades), batch ingestion throughput (large batch jobs with many indexes can take significantly longer to complete) and reload time (when you trigger a segment reload after adding a new index, every segment must be rebuilt, and on tables with thousands of segments this can take hours).
+Index construction happens during segment creation (for offline tables) and during segment completion and conversion (for realtime tables). The more indexes configured, the longer each segment takes to build. This directly affects realtime ingestion latency (if segment completion takes too long, consuming segments accumulate and freshness degrades), batch ingestion throughput (large batch jobs with many indexes can take significantly longer to complete) and reload time (when you trigger a segment reload after adding a new index, every segment must be rebuilt and on tables with thousands of segments this can take hours).
 
 ### Reload Impact
 
@@ -486,7 +486,7 @@ Prefer Bloom filters over inverted indexes for high cardinality ID columns. If a
 
 ## Common Pitfalls
 
-Adding a Star Tree without a repeated aggregation pattern to justify it is pure waste. Star Tree indexes consume significant storage and build time, and if your queries are adhoc and vary widely, the Star Tree will rarely be hit.
+Adding a Star Tree without a repeated aggregation pattern to justify it is pure waste. Star Tree indexes consume significant storage and build time and if your queries are adhoc and vary widely, the Star Tree will rarely be hit.
 
 Indexing every column "just in case" is the most common mistake teams make. Every index has a cost and the marginal benefit of indexing a column that is never filtered or grouped is exactly zero.
 

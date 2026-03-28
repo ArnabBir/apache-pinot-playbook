@@ -5,7 +5,7 @@
 > [!IMPORTANT]
 > The query layer is the ultimate test of our design. Every choice we made regarding schemas, indexes and segments exists solely to answer analytical questions at high speed.
 
-A well designed Pinot deployment can answer complex aggregations over billions of rows in **single digit milliseconds**. To realize this, we must query the system correctly to avoid timeouts and resource exhaustion. This chapter covers the scatter-gather model that distributes work across the cluster, the SQL patterns that Pinot rewards and the ones it punishes, how to interpret broker response metadata and timing results, and how to build reliable service layers on top of the query engine.
+A well designed Pinot deployment can answer complex aggregations over billions of rows in **single digit milliseconds**. To realize this, we must query the system correctly to avoid timeouts and resource exhaustion. This chapter covers the scatter-gather model that distributes work across the cluster, the SQL patterns that Pinot rewards and the ones it punishes, how to interpret broker response metadata and timing results and how to build reliable service layers on top of the query engine.
 
 ## The Scatter Gather Model
 
@@ -64,7 +64,7 @@ sequenceDiagram
 
 **Step 5: Scatter.** The broker sends the pruned query plan to each relevant server. Each server receives a list of segments to process and the query operators to execute. Servers process their segments in parallel, applying filters, indexes and aggregations locally.
 
-**Step 6: Local Execution on Servers.** Each server applies column-level indexes (inverted, range, Bloom, text, JSON) to resolve filter predicates into document ID sets, reads the required columns from the forward index for matching documents, computes partial aggregations (SUM, COUNT, MIN, MAX, AVG, DISTINCTCOUNTHLL, etc.) locally, and returns partial results to the broker.
+**Step 6: Local Execution on Servers.** Each server applies column-level indexes (inverted, range, Bloom, text, JSON) to resolve filter predicates into document ID sets, reads the required columns from the forward index for matching documents, computes partial aggregations (SUM, COUNT, MIN, MAX, AVG, DISTINCTCOUNTHLL, etc.) locally and returns partial results to the broker.
 
 **Step 7: Reduce and Merge.** The broker collects partial results from all servers and performs the final merge. For aggregation queries, partial aggregations are combined (partial SUMs are added together). For GROUP BY queries, groups from different servers are merged. ORDER BY and LIMIT are applied at the broker level after merging.
 
@@ -72,7 +72,7 @@ sequenceDiagram
 
 ### Why This Model Matters for Query Design
 
-The scatter gather model has several implications that should shape how you write queries. Filters are your most powerful tool: the more selective your WHERE clause, the fewer documents each server must process, and filters that align with indexes are essentially free. Aggregations are preferred over raw row returns because servers send small partial results to the broker rather than serializing and transmitting massive row payloads. Even with a `LIMIT 10` clause, every server must still compute its full partial result before the broker applies the limit. This is why unbounded GROUP BY queries with millions of groups can be expensive despite a small result set. The broker is also a single point of merge: if your query produces an enormous intermediate result set (millions of groups or millions of raw rows), the broker must hold all of it in memory during the reduce phase, and this is the most common cause of broker OOM errors.
+The scatter gather model has several implications that should shape how you write queries. Filters are your most powerful tool: the more selective your WHERE clause, the fewer documents each server must process and filters that align with indexes are essentially free. Aggregations are preferred over raw row returns because servers send small partial results to the broker rather than serializing and transmitting massive row payloads. Even with a `LIMIT 10` clause, every server must still compute its full partial result before the broker applies the limit. This is why unbounded GROUP BY queries with millions of groups can be expensive despite a small result set. The broker is also a single point of merge: if your query produces an enormous intermediate result set (millions of groups or millions of raw rows), the broker must hold all of it in memory during the reduce phase and this is the most common cause of broker OOM errors.
 
 
 ## SQL Compatibility
@@ -83,7 +83,7 @@ Pinot implements a substantial subset of ANSI SQL, but it is not a general-purpo
 
 Pinot's SQL support covers SELECT with column projections, expressions and aliases, as well as FROM a single table (v1 engine) or multiple tables with JOINs (MSE only, covered in Chapter 11). The WHERE clause supports equality, comparison, range, IN, NOT IN, BETWEEN, IS NULL, IS NOT NULL, LIKE, REGEXP_LIKE, TEXT_MATCH and JSON_MATCH predicates. GROUP BY accepts one or more columns or expressions. ORDER BY supports ASC/DESC on one or more columns. LIMIT and OFFSET provide result set pagination. HAVING enables post-aggregation filtering.
 
-Aggregation functions include COUNT, SUM, AVG, MIN, MAX, DISTINCTCOUNT, DISTINCTCOUNTHLL, DISTINCTCOUNTSMARTHLL, PERCENTILE, PERCENTILETDIGEST, PERCENTILEEST and many more. Transform functions include DATETIMECONVERT, DATE_TRUNC, DATETRUNC, CAST, CASE WHEN, COALESCE, string functions (UPPER, LOWER, SUBSTR, CONCAT), math functions and JSON functions. The DISTINCT keyword, CASE WHEN / THEN / ELSE logic, and multi-value column operations (MV_TO_ARRAY, VALUEIN and other multi-value functions) are all supported.
+Aggregation functions include COUNT, SUM, AVG, MIN, MAX, DISTINCTCOUNT, DISTINCTCOUNTHLL, DISTINCTCOUNTSMARTHLL, PERCENTILE, PERCENTILETDIGEST, PERCENTILEEST and many more. Transform functions include DATETIMECONVERT, DATE_TRUNC, DATETRUNC, CAST, CASE WHEN, COALESCE, string functions (UPPER, LOWER, SUBSTR, CONCAT), math functions and JSON functions. The DISTINCT keyword, CASE WHEN / THEN / ELSE logic and multi-value column operations (MV_TO_ARRAY, VALUEIN and other multi-value functions) are all supported.
 
 ### What Pinot SQL Does NOT Support (v1 Engine)
 
@@ -100,7 +100,7 @@ Aggregation functions include COUNT, SUM, AVG, MIN, MAX, DISTINCTCOUNT, DISTINCT
 
 ### PQL vs SQL
 
-Historically, Pinot used a proprietary query language called PQL (Pinot Query Language). PQL has been deprecated in favor of standard SQL syntax. All new development should use the SQL endpoint (`/query/sql`). If you encounter PQL in older documentation or codebases, convert it to SQL. The two key differences were that PQL used `TOP` instead of `LIMIT`, and PQL had different aggregation syntax for certain functions.
+Historically, Pinot used a proprietary query language called PQL (Pinot Query Language). PQL has been deprecated in favor of standard SQL syntax. All new development should use the SQL endpoint (`/query/sql`). If you encounter PQL in older documentation or codebases, convert it to SQL. The two key differences were that PQL used `TOP` instead of `LIMIT` and PQL had different aggregation syntax for certain functions.
 
 
 ## Query Patterns That Work Well

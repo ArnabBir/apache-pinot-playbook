@@ -247,7 +247,7 @@ JSON is the simplest format to use and the most forgiving when it comes to schem
 "stream.kafka.decoder.class.name": "org.apache.pinot.plugin.inputformat.json.JSONMessageDecoder"
 ```
 
-JSON requires no external schema registry, produces human-readable messages, and is easy to debug. The drawbacks are larger message size (field names are repeated in every message), no built-in type enforcement, and slower parsing than binary formats.
+JSON requires no external schema registry, produces human-readable messages and is easy to debug. The drawbacks are larger message size (field names are repeated in every message), no built-in type enforcement and slower parsing than binary formats.
 
 JSON is the recommended format for development, testing and moderate-throughput production workloads. This repository uses JSON for all stream topics.
 
@@ -264,7 +264,7 @@ When using Avro with Confluent Schema Registry:
 
 The decoder fetches the writer schema from the registry using the schema ID embedded in each message, then uses that schema to deserialize the binary Avro payload. This means the Pinot decoder can handle messages written with different schema versions in the same topic, provided the schemas are backward compatible.
 
-Avro's advantages are a compact binary format, schema evolution with compatibility enforcement, and strong type safety. The drawbacks are a required running schema registry, messages that are not human-readable without tooling, and an additional operational dependency.
+Avro's advantages are a compact binary format, schema evolution with compatibility enforcement and strong type safety. The drawbacks are a required running schema registry, messages that are not human-readable without tooling and an additional operational dependency.
 
 ### Protobuf Decoding
 
@@ -275,11 +275,11 @@ Protocol Buffers (Protobuf) is another binary format popular in organizations th
 "stream.kafka.decoder.prop.descriptorFile": "/path/to/message.desc"
 ```
 
-Protobuf is extremely compact with excellent backward and forward compatibility and is widely used in microservice architectures. The drawbacks are required compiled descriptor files, less flexible schema evolution than Avro, and limited tooling for ad-hoc inspection.
+Protobuf is extremely compact with excellent backward and forward compatibility and is widely used in microservice architectures. The drawbacks are required compiled descriptor files, less flexible schema evolution than Avro and limited tooling for ad-hoc inspection.
 
 ### Custom Decoder Implementation
 
-If your messages use a proprietary format or require custom deserialization logic, you can implement a custom decoder by extending the `StreamMessageDecoder` interface. The custom decoder must implement `init(Map<String, String> props, Set<String> fieldsToRead, String topicName)` for initialization with configuration properties, and `decode(byte[] payload, GenericRow destination)` for decoding a raw message byte array into a Pinot `GenericRow`.
+If your messages use a proprietary format or require custom deserialization logic, you can implement a custom decoder by extending the `StreamMessageDecoder` interface. The custom decoder must implement `init(Map<String, String> props, Set<String> fieldsToRead, String topicName)` for initialization with configuration properties and `decode(byte[] payload, GenericRow destination)` for decoding a raw message byte array into a Pinot `GenericRow`.
 
 Register your custom decoder class in the stream config:
 
@@ -527,7 +527,7 @@ We treat these heuristics as our "Rules of Engagement" for maintaining a healthy
 
 We separate event streams (append-only) from state streams (upsert) to prevent unnecessary overhead and resource competition. We use `auto.offset.reset: smallest` by default to ensure we never miss data during a deployment or recovery. We verify decoder compatibility with sample data in a test environment before any production change. We treat **consumer lag** as a primary metric: if our lag exceeds our freshness promise, we trigger an alert immediately.
 
-Flush thresholds are not "set and forget." During the first week of a new table deployment, we monitor segment creation rates, consuming segment sizes, and total segment counts before making adjustments.
+Flush thresholds are not "set and forget." During the first week of a new table deployment, we monitor segment creation rates, consuming segment sizes and total segment counts before making adjustments.
 
 # Common Pitfalls & Solutions
 

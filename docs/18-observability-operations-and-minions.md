@@ -15,7 +15,7 @@ Cluster health is maintained by focusing on three interrelated areas of instrume
 
 | Pillar | Focus | Primary Goal |
 | :--- | :--- | :--- |
-| **Infrastructure** | Metrics, Logs, and Traces | Provide high-resolution visibility into every component. |
+| **Infrastructure** | Metrics, Logs and Traces | Provide high-resolution visibility into every component. |
 | **Procedures** | Dashboards and Alerting | Translate raw signals into safe, effective human actions. |
 | **Automation** | The Minion Framework | Manage background tasks like compaction without losing control. |
 
@@ -135,13 +135,13 @@ JAVA_OPTS="$JAVA_OPTS -javaagent:/opt/jmx_exporter/jmx_prometheus_javaagent.jar=
 
 A well-designed Pinot Grafana dashboard should have four separate panel groups, each aligned to a specific observability concern.
 
-The **freshness panel** tracks Kafka consumer lag by partition, consuming segment count versus expected count, latest event timestamp versus current time, and ingestion rate in rows per second.
+The **freshness panel** tracks Kafka consumer lag by partition, consuming segment count versus expected count, latest event timestamp versus current time and ingestion rate in rows per second.
 
-The **query health panel** shows query latency percentiles (p50, p90, p99) over time, query throughput in QPS, error rate and timeout rate, and segments scanned per query to detect pruning regressions.
+The **query health panel** shows query latency percentiles (p50, p90, p99) over time, query throughput in QPS, error rate and timeout rate and segments scanned per query to detect pruning regressions.
 
-The **maintenance panel** displays active Minion tasks and their status, segment count per table over time, deep store upload and download rate, and retention enforcement activity.
+The **maintenance panel** displays active Minion tasks and their status, segment count per table over time, deep store upload and download rate and retention enforcement activity.
 
-The **resource panel** covers CPU utilization per component, heap memory usage and GC activity, off-heap memory (direct memory and memory-mapped files), disk usage per server, and network I/O between components.
+The **resource panel** covers CPU utilization per component, heap memory usage and GC activity, off-heap memory (direct memory and memory-mapped files), disk usage per server and network I/O between components.
 
 ### Health Check Endpoints
 
@@ -210,7 +210,7 @@ curl -s "http://localhost:9000/schemas/trip_events" | python -m json.tool
 
 A table reload causes all servers to re-read the table configuration and rebuild indexes for existing segments. Reloads are necessary after index configuration changes (adding or removing indexes), schema changes that affect existing segments or when segments have been replaced in the deep store.
 
-A reload is warranted after adding a new index type (inverted, range, bloom, text or star-tree) to the table configuration, after changing segment configuration that affects how existing segments are served, and after a bulk segment replacement in the deep store.
+A reload is warranted after adding a new index type (inverted, range, bloom, text or star-tree) to the table configuration, after changing segment configuration that affects how existing segments are served and after a bulk segment replacement in the deep store.
 
 **Execution:**
 

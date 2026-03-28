@@ -45,25 +45,25 @@ flowchart LR
 
 ### Level 1: Local Docker (Learning and Prototyping)
 
-Level 1 is intended for individual engineers learning Pinot concepts, prototyping schema designs and running experiments with the deterministic data generator. The deployment consists of a single node of every component (one controller, one broker, one server, one minion) with no replication, no fault tolerance and no persistent storage. All components share a single host's CPU and memory, and data is ephemeral. It will be lost when containers are removed.
+Level 1 is intended for individual engineers learning Pinot concepts, prototyping schema designs and running experiments with the deterministic data generator. The deployment consists of a single node of every component (one controller, one broker, one server, one minion) with no replication, no fault tolerance and no persistent storage. All components share a single host's CPU and memory and data is ephemeral. It will be lost when containers are removed.
 
 This level proves that your schema design, table configuration and queries work correctly against realistic data. It does not prove that your configuration will survive server failures, handle concurrent query load or perform acceptably at production data volumes.
 
 ### Level 2: Shared Non-Production Cluster (Team Development)
 
-Level 2 is intended for multiple engineers working against a shared environment with real-ish data volumes, realistic network boundaries and authentication enabled. The deployment uses multiple nodes with at least two servers and two brokers, basic replication configured at replication factor 2 or higher, authentication and TLS enabled to match the production security posture, persistent storage so that data survives restarts, and ingestion from a shared Kafka cluster with representative topic configurations.
+Level 2 is intended for multiple engineers working against a shared environment with real-ish data volumes, realistic network boundaries and authentication enabled. The deployment uses multiple nodes with at least two servers and two brokers, basic replication configured at replication factor 2 or higher, authentication and TLS enabled to match the production security posture, persistent storage so that data survives restarts and ingestion from a shared Kafka cluster with representative topic configurations.
 
-This level proves that your deployment configuration handles multi-node coordination, that rebalance operations complete successfully, and that your monitoring and alerting pipeline works.
+This level proves that your deployment configuration handles multi-node coordination, that rebalance operations complete successfully and that your monitoring and alerting pipeline works.
 
 ### Level 3: Production Kubernetes (Hardened Operations)
 
-Level 3 is intended for serving real user traffic with defined SLAs, automated recovery, capacity-planned resources and comprehensive observability. The deployment is managed by Helm with StatefulSets for servers and Deployments for brokers. Resource requests and limits are tuned through load testing. Persistent volumes are backed by cloud block storage and the deep store uses object storage (S3, GCS or Azure Blob Storage). TLS is enforced throughout, RBAC is configured and network policies are in place. Readiness and liveness probes are configured for each component, and an Ingress with TLS termination, rate limiting and authentication handles external access. Monitoring dashboards, alerting rules and on-call runbooks are all in place.
+Level 3 is intended for serving real user traffic with defined SLAs, automated recovery, capacity-planned resources and comprehensive observability. The deployment is managed by Helm with StatefulSets for servers and Deployments for brokers. Resource requests and limits are tuned through load testing. Persistent volumes are backed by cloud block storage and the deep store uses object storage (S3, GCS or Azure Blob Storage). TLS is enforced throughout, RBAC is configured and network policies are in place. Readiness and liveness probes are configured for each component and an Ingress with TLS termination, rate limiting and authentication handles external access. Monitoring dashboards, alerting rules and on-call runbooks are all in place.
 
 This level proves that your cluster can serve production traffic within defined SLAs and that failures are detected and recovered automatically.
 
 ### Level 4: Managed Cloud (StarTree Cloud or Self-Managed on AWS/GCP/Azure)
 
-Level 4 reduces operational burden by delegating infrastructure management to a specialized platform while retaining control over schema design, data modeling and query patterns. Infrastructure provisioning, upgrades and patching are handled by the managed service, along with automatic scaling and rebalancing, integrated monitoring and alerting, and SLA guarantees backed by the service provider. Engineering focus shifts from infrastructure operations to data platform design.
+Level 4 reduces operational burden by delegating infrastructure management to a specialized platform while retaining control over schema design, data modeling and query patterns. Infrastructure provisioning, upgrades and patching are handled by the managed service, along with automatic scaling and rebalancing, integrated monitoring and alerting and SLA guarantees backed by the service provider. Engineering focus shifts from infrastructure operations to data platform design.
 
 > [!IMPORTANT]
 > The choice between self-managed Kubernetes and StarTree Cloud is not just about technical capability. It is about organizational trade-offs. If your team has strong infrastructure engineering capabilities and needs fine-grained control over the data plane, self-managed Kubernetes offers more flexibility. If your team is small, understaffed or focused on analytical value rather than infrastructure operations, StarTree Cloud dramatically reduces operational burden.
@@ -479,17 +479,17 @@ AWS is one of the most common deployment targets for production Pinot clusters. 
 
 ### GCP (GKE + GCS + Confluent)
 
-On GCP, use Google Kubernetes Engine (GKE) with node pools, `n2-highmem` instances for servers and `n2-standard` instances for brokers. Google Cloud Storage with the Pinot GCS filesystem plugin serves as the deep store. Confluent Cloud on GCP or self-managed Kafka on GKE handles the streaming layer. Persistent Disks (SSD type) provide server storage, and VPC-native GKE clusters with private nodes enforce network boundaries.
+On GCP, use Google Kubernetes Engine (GKE) with node pools, `n2-highmem` instances for servers and `n2-standard` instances for brokers. Google Cloud Storage with the Pinot GCS filesystem plugin serves as the deep store. Confluent Cloud on GCP or self-managed Kafka on GKE handles the streaming layer. Persistent Disks (SSD type) provide server storage and VPC-native GKE clusters with private nodes enforce network boundaries.
 
 ### Azure (AKS + Blob Storage + Event Hubs)
 
-On Azure, use Azure Kubernetes Service (AKS) with node pools, `E-series` (memory-optimized) VMs for servers. Azure Blob Storage with the Pinot Azure filesystem plugin serves as the deep store. Azure Event Hubs with Kafka protocol support or Confluent Cloud on Azure handles the streaming layer. Azure Premium SSD managed disks provide server storage, and AKS with Azure CNI and network policies enforces connectivity boundaries.
+On Azure, use Azure Kubernetes Service (AKS) with node pools, `E-series` (memory-optimized) VMs for servers. Azure Blob Storage with the Pinot Azure filesystem plugin serves as the deep store. Azure Event Hubs with Kafka protocol support or Confluent Cloud on Azure handles the streaming layer. Azure Premium SSD managed disks provide server storage and AKS with Azure CNI and network policies enforces connectivity boundaries.
 
 ### StarTree Cloud as a Managed Alternative
 
 [StarTree Cloud](https://startree.ai/) is the managed Pinot platform offered by the company founded by Pinot's creators. It handles infrastructure provisioning, upgrades, scaling, monitoring and security patching.
 
-StarTree Cloud is worth evaluating when your team does not have dedicated infrastructure engineers for Pinot operations, when you need enterprise features like multi-tenant isolation, advanced security or integrated data management, or when you want to focus engineering effort on schema design and analytics delivery rather than Kubernetes operations.
+StarTree Cloud is worth evaluating when your team does not have dedicated infrastructure engineers for Pinot operations, when you need enterprise features like multi-tenant isolation, advanced security or integrated data management or when you want to focus engineering effort on schema design and analytics delivery rather than Kubernetes operations.
 
 
 ## Sizing and Capacity Planning
@@ -545,7 +545,7 @@ If an upgrade introduces regressions, stop the upgrade by pausing the rollout wi
 
 ### Service Mesh Integration
 
-In organizations that use a service mesh (such as Istio or Linkerd), Pinot components should be registered as mesh services. This provides mutual TLS (mTLS) between all Pinot components without managing certificates manually, traffic observability with request-level metrics and tracing, and traffic management with retries, timeouts and circuit breakers.
+In organizations that use a service mesh (such as Istio or Linkerd), Pinot components should be registered as mesh services. This provides mutual TLS (mTLS) between all Pinot components without managing certificates manually, traffic observability with request-level metrics and tracing and traffic management with retries, timeouts and circuit breakers.
 
 > [!CAUTION]
 > When using a service mesh, ensure that the mesh's sidecar proxy does not interfere with Pinot's internal communication protocols. Pinot uses Netty-based protocols for server-to-server communication in the multi-stage engine.

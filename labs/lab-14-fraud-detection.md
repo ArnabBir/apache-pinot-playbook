@@ -2,16 +2,15 @@
 
 ## Overview
 
-Every data engineering pattern taught in this series was introduced in the context of rides and commerce analytics. This lab breaks that frame deliberately. The goal is to demonstrate that the same architectural primitives, including append-only fact tables, upsert state tables, inverted indexes on categorical dimensions, real-time stream ingestion, and sub-100ms aggregation queries, generalize cleanly to an entirely different problem domain.
+Every data engineering pattern taught in this series was introduced in the context of rides and commerce analytics. This lab breaks that frame deliberately. The goal is to demonstrate that the same architectural primitives, including append-only fact tables, upsert state tables, inverted indexes on categorical dimensions, real-time stream ingestion and sub-100ms aggregation queries, generalize cleanly to an entirely different problem domain.
 
 The domain here is financial fraud detection. A payments platform needs to identify suspicious transaction patterns within seconds of occurrence: cards used too many times in a short window, amounts that are outliers against an account's own history, geographic concentration of flagged activity. These are analytically straightforward questions, but they must be answered in real time against a continuously arriving event stream, at the latency and freshness requirements of a fraud prevention system.
 
-By the end of this lab, you will have a working schema, a running ingestion pipeline, and four executable fraud detection queries. You will also have measured their latency and proposed the index configuration that meets the fraud SLO.
+By the end of this lab, you will have a working schema, a running ingestion pipeline and four executable fraud detection queries. You will also have measured their latency and proposed the index configuration that meets the fraud SLO.
 
 > [!NOTE]
 > This lab introduces new Kafka topics and Pinot tables that do not exist in the preceding labs. Follow the setup steps in order. The payment data generator creates synthetic events. No real financial data is used.
 
----
 
 ## Learning Objectives
 
@@ -23,13 +22,12 @@ By the end of this lab, you will have a working schema, a running ingestion pipe
 | Run account-level anomaly detection | Query 3 returns transactions with `amount_ratio` above 3 using a JOIN against `account_state` |
 | Measure fraud query latency | Your latency table has recorded values for all four queries |
 | Define a domain-specific SLO | You can state the freshness and latency SLOs for this fraud system and explain why those thresholds were chosen |
-| Map the fraud pattern to other domains | You can describe how velocity detection maps to ad-tech, e-commerce, and IoT use cases |
+| Map the fraud pattern to other domains | You can describe how velocity detection maps to ad-tech, e-commerce and IoT use cases |
 
----
 
 ## The Fraud Detection Architecture
 
-The architecture follows the same pipeline shape as the rides platform. Events arrive in Kafka, Pinot consumes them in real time, and analytical queries run against Pinot. But the semantic roles of the tables are different. The `payment_events` table is the raw audit log of every transaction, structured for time-series aggregation. The `account_state` table is the mutable, upserted view of each account's current risk profile, structured for point lookups and joins.
+The architecture follows the same pipeline shape as the rides platform. Events arrive in Kafka, Pinot consumes them in real time and analytical queries run against Pinot. But the semantic roles of the tables are different. The `payment_events` table is the raw audit log of every transaction, structured for time-series aggregation. The `account_state` table is the mutable, upserted view of each account's current risk profile, structured for point lookups and joins.
 
 ```mermaid
 flowchart TB
@@ -81,11 +79,10 @@ flowchart TB
 
 The two Pinot tables serve different roles in fraud analytics. `payment_events` answers temporal aggregation questions: how many transactions occurred in this window, what was the distribution of amounts, where were they geographically. `account_state` answers account-context questions: what is the normal spending level for this account, what is its current risk flag status. Query 3 joins these two tables to compare real-time transaction amounts against each account's historical baseline.
 
----
 
 ## Schema Design Exercise
 
-Before reading the solution, work through this exercise independently. The schema you design determines which queries are fast, which are possible at all, and which will require reingestion to fix.
+Before reading the solution, work through this exercise independently. The schema you design determines which queries are fast, which are possible at all and which will require reingestion to fix.
 
 ### The Design Challenge
 
@@ -116,7 +113,6 @@ Answer the following questions before looking at the solution schema.
 
 Fill in your answers before continuing to the solution.
 
----
 
 ## Schema Solution: payment_events
 
@@ -235,7 +231,6 @@ The solution schema below reflects the design decisions explained field by field
 | `event_time_ms` | DATETIME | The primary time dimension. Millisecond epoch format aligns with Kafka message timestamps. Used for all time-window predicates and segment pruning. |
 | `transaction_id` | No primary key | `payment_events` is an append-only audit table. Each transaction event is a new row. There is no upsert semantics because the historical record of every event must be preserved. |
 
----
 
 ## Schema Solution: account_state
 
@@ -335,7 +330,6 @@ The `state_version` field serves as the `comparisonColumns` value in the upsert 
 
 The `avg_30d_amount` field is the key enabler of Query 3. Rather than computing rolling averages at query time, which would require scanning all 30 days of `payment_events` on every fraud check, the account risk service pre-computes this value and publishes it as part of each state update. The query simply reads the pre-computed value and divides.
 
----
 
 ## Step 1: Create Kafka Topics
 
@@ -371,7 +365,6 @@ account-state
 payment-events
 ```
 
----
 
 ## Step 2: Create the Pinot Tables
 
@@ -415,11 +408,10 @@ curl -s -X POST \
 
 Navigate to **http://localhost:9000** and verify that `payment_events_REALTIME` and `account_state_REALTIME` appear in the Tables list.
 
----
 
 ## Step 3: Generate Synthetic Payment Data
 
-The data generator creates a continuous stream of realistic payment events and publishes them to both Kafka topics. Events include a mix of normal transactions and pre-seeded suspicious patterns: one account will generate 8 transactions in 60 seconds, several accounts will have transactions significantly above their 30-day average, and flagged transactions will cluster in two cities.
+The data generator creates a continuous stream of realistic payment events and publishes them to both Kafka topics. Events include a mix of normal transactions and pre-seeded suspicious patterns: one account will generate 8 transactions in 60 seconds, several accounts will have transactions significantly above their 30-day average and flagged transactions will cluster in two cities.
 
 ```bash
 python3 scripts/generate_payment_events.py \
@@ -441,7 +433,6 @@ SELECT COUNT(*) AS events_ingested FROM payment_events
 
 Re-run this query every 10 seconds. The count should grow at approximately 20 events per second.
 
----
 
 ## Step 4: Run the Fraud Detection Queries
 
@@ -484,7 +475,7 @@ GROUP BY merchant_category
 ORDER BY max_amount DESC
 ```
 
-The merchant category dimension is where fraud analysts start when investigating card-not-present fraud. Luxury goods, electronics, and gift card categories consistently show the highest fraud rates because these items are easily resold. This query produces the category-level summary that a fraud analyst would review at the start of an investigation.
+The merchant category dimension is where fraud analysts start when investigating card-not-present fraud. Luxury goods, electronics and gift card categories consistently show the highest fraud rates because these items are easily resold. This query produces the category-level summary that a fraud analyst would review at the start of an investigation.
 
 ### Query 3 — Account-Level Anomaly Detection
 
@@ -528,9 +519,8 @@ GROUP BY country, city
 ORDER BY suspicious_txns DESC
 ```
 
-Geographic concentration analysis identifies regional fraud campaigns — attacks that target a specific city's merchant network, or money mule networks operating from a specific location. The 30-minute window is chosen to distinguish active ongoing campaigns from historical activity. The `is_flagged` filter narrows the result to transactions already identified by upstream rule engines, so this query is an aggregation over confirmed signals rather than a raw detection.
+Geographic concentration analysis identifies regional fraud campaigns — attacks that target a specific city's merchant network or money mule networks operating from a specific location. The 30-minute window is chosen to distinguish active ongoing campaigns from historical activity. The `is_flagged` filter narrows the result to transactions already identified by upstream rule engines, so this query is an aggregation over confirmed signals rather than a raw detection.
 
----
 
 ## Latency Measurement Table
 
@@ -543,9 +533,8 @@ After running all four queries, record the execution statistics from Response St
 | Query 3 — Account Anomaly (JOIN) | | | | | |
 | Query 4 — Geographic Concentration | | | | | |
 
-Pay attention to the contrast between Query 3 (which uses the Multi-Stage Engine for the JOIN) and Queries 1, 2, and 4 (which use the single-stage engine). The JOIN adds shuffle overhead but enables a class of analysis that is impossible in the single-stage engine.
+Pay attention to the contrast between Query 3 (which uses the Multi-Stage Engine for the JOIN) and Queries 1, 2 and 4 (which use the single-stage engine). The JOIN adds shuffle overhead but enables a class of analysis that is impossible in the single-stage engine.
 
----
 
 ## Index Optimization Exercise
 
@@ -556,7 +545,7 @@ Before reading the recommended configuration below, answer the following questio
 | Which columns appear in WHERE equality predicates across all four queries? | |
 | Which column appears in the most time-range predicates? | |
 | Which column is the JOIN key in Query 3? | |
-| Which column has the highest cardinality: `account_id`, `merchant_category`, or `city`? | |
+| Which column has the highest cardinality: `account_id`, `merchant_category` or `city`? | |
 | Which index type would best serve a `WHERE is_flagged = true` predicate? | |
 | Would a star-tree index help Query 2? What configuration would be required? | |
 | Is a bloom filter on `transaction_id` useful for any of the four fraud queries? | |
@@ -619,7 +608,7 @@ Fill in your answers, then compare to the recommended configuration.
 | Range | `amount`, `amount_usd` | Query 2, Query 3 | Query 2 filters `amount > 1000`. Range index turns this into a binary search rather than a row-by-row comparison. |
 | Bloom filter | `transaction_id` | Not the four fraud queries | Point lookups by transaction ID are common in fraud investigation (look up a specific transaction). The bloom filter eliminates segments that do not contain a given ID. |
 | Bloom filter | `account_id` | Supplements inverted index | For point lookups of a single account's history, the bloom filter eliminates entire segments before the inverted index is applied. |
-| Star-tree | `merchant_category`, `country`, `city`, `is_flagged` | Query 2, Query 4 | Pre-aggregates COUNT, SUM(amount), and MAX(amount) across the geographic and category dimensions. Query 2 and Query 4 read pre-computed nodes rather than scanning rows. |
+| Star-tree | `merchant_category`, `country`, `city`, `is_flagged` | Query 2, Query 4 | Pre-aggregates COUNT, SUM(amount) and MAX(amount) across the geographic and category dimensions. Query 2 and Query 4 read pre-computed nodes rather than scanning rows. |
 
 The star-tree configuration above pre-aggregates the exact metrics used in Query 2 and Query 4. When those queries run, Pinot reads tree nodes instead of raw rows. For a table with 100 million events, this difference is the gap between a 300ms query and a 5ms query.
 
@@ -650,7 +639,6 @@ The star-tree configuration above pre-aggregates the exact metrics used in Query
 
 The `strictReplicaGroup` routing is mandatory for upsert tables. Without it, a query might hit different replicas for different segments of `account_state`, which can return inconsistent views of the same account's state.
 
----
 
 ## The SLO for Fraud Detection
 
@@ -666,7 +654,7 @@ A fraud detection system has more demanding freshness and latency requirements t
 | Good threshold | `lag_seconds` below 5 |
 | Alert threshold | `lag_seconds` above 10 for more than 30 seconds |
 | Owner | Data Platform Engineering |
-| Escalation | If lag exceeds 30 seconds, page on-call. Investigate Kafka consumer lag, server consuming segment status, and Kafka broker health in that order. |
+| Escalation | If lag exceeds 30 seconds, page on-call. Investigate Kafka consumer lag, server consuming segment status and Kafka broker health in that order. |
 
 Run the freshness measurement now.
 
@@ -704,11 +692,10 @@ Record your measured `timeUsedMs` values against the targets.
 
 If any query exceeds its target, return to the index optimization section and verify that the recommended configuration has been applied to the table.
 
----
 
 ## Applying the Fraud Pattern to Other Domains
 
-The four query patterns introduced in this lab are not specific to financial fraud. They are general patterns for detecting anomalous behavior in event streams, and they appear across every domain that Pinot is deployed in.
+The four query patterns introduced in this lab are not specific to financial fraud. They are general patterns for detecting anomalous behavior in event streams and they appear across every domain that Pinot is deployed in.
 
 | Fraud Pattern | What It Detects | Ad-Tech Equivalent | E-Commerce Equivalent | IoT Equivalent |
 |---------------|-----------------|--------------------|-----------------------|----------------|
@@ -717,11 +704,10 @@ The four query patterns introduced in this lab are not specific to financial fra
 | Account-level anomaly (JOIN to state table) | Current transaction vs historical baseline for that account | Current CTR vs 30-day average CTR for that placement | Current session basket size vs customer's 90-day average | Current temperature reading vs device's calibration baseline |
 | Geographic concentration of flagged events | Spatial clustering of confirmed fraud | Impression concentration in low-quality traffic geo | Return request concentration in specific fulfillment zone | Fault signal clustering in specific physical grid zone |
 
-The schema patterns generalize equally well. An append-only fact table holds the immutable event stream. A upsert state table holds the current mutable context per entity (account, user, device, placement). The fraud detection queries become click fraud detection queries, inventory manipulation detection queries, or sensor anomaly detection queries by substituting the domain-specific field names.
+The schema patterns generalize equally well. An append-only fact table holds the immutable event stream. A upsert state table holds the current mutable context per entity (account, user, device, placement). The fraud detection queries become click fraud detection queries, inventory manipulation detection queries or sensor anomaly detection queries by substituting the domain-specific field names.
 
 This generalization is the core lesson of this lab. The Pinot architectural patterns you have learned are not specific to any domain. They are a general-purpose framework for answering real-time analytical questions against continuously arriving event data.
 
----
 
 ## Reflection Prompts
 
@@ -731,8 +717,7 @@ This generalization is the core lesson of this lab. The Pinot architectural patt
 
 3. The `is_flagged` boolean dimension is set by an upstream rule engine before the event is published to Kafka. This means that Query 4 is reporting on transactions that were already identified as suspicious, rather than detecting new fraud signals. Describe a detection approach using only the fields available in `payment_events` that does not depend on the upstream `is_flagged` signal.
 
-4. You are asked to extend the fraud detection system to support geo-velocity detection: alerting when the same `card_token` is used in two cities that are more than 500 kilometers apart within a 30-minute window. Describe what changes to the schema, the ingestion pipeline, and the query pattern would be required to implement this signal in Pinot, and identify the parts of this problem that cannot be solved with Pinot SQL alone.
+4. You are asked to extend the fraud detection system to support geo-velocity detection: alerting when the same `card_token` is used in two cities that are more than 500 kilometers apart within a 30-minute window. Describe what changes to the schema, the ingestion pipeline and the query pattern would be required to implement this signal in Pinot and identify the parts of this problem that cannot be solved with Pinot SQL alone.
 
----
 
 [Previous: Lab 13 — Chaos Engineering and Cluster Recovery](lab-13-chaos-engineering.md) | [Return to README](../README.md)

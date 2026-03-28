@@ -30,7 +30,7 @@ A segment is Pinot's fundamental unit of data storage, distribution and query pr
 > **The Book Analogy**
 > Think of a segment as a page in a book that comes with its own index tab. A Pinot table is the entire book and its data is divided into pages (segments). Each page contains a self-contained set of rows stored in columnar format. And each page carries its own index tab at the edge, allowing the reader (the query engine) to quickly determine whether this page contains relevant content without reading every word.
 
-This analogy captures several important properties. Each segment is self-contained: it holds not just the data, but also the column dictionaries, forward indexes, inverted indexes and metadata needed to query it independently, so you can take a single segment file, copy it to another server and query it in isolation. Once completed, a segment is immutable. Like a printed page it does not change, and new data goes into new segments. This immutability eliminates row level locks, write ahead logs for mutations and complex concurrency control for reads. Indexes are constructed individually per segment, so rebuilding an index requires reprocessing only the affected segment rather than the entire table. Finally, each segment is assigned to one or more servers for hosting, with the assignment tracked in ZooKeeper so that brokers can route queries to the right servers.
+This analogy captures several important properties. Each segment is self-contained: it holds not just the data, but also the column dictionaries, forward indexes, inverted indexes and metadata needed to query it independently, so you can take a single segment file, copy it to another server and query it in isolation. Once completed, a segment is immutable. Like a printed page it does not change and new data goes into new segments. This immutability eliminates row level locks, write ahead logs for mutations and complex concurrency control for reads. Indexes are constructed individually per segment, so rebuilding an index requires reprocessing only the affected segment rather than the entire table. Finally, each segment is assigned to one or more servers for hosting, with the assignment tracked in ZooKeeper so that brokers can route queries to the right servers.
 
 ### The Physical Level
 
@@ -64,14 +64,14 @@ Segments are not static objects that appear and remain unchanged forever. They m
 ```mermaid
 stateDiagram-v2
     [*] --> Consuming: Realtime server begins consuming from stream partition
-    Consuming --> Committing: Flush threshold reached (row count, time, or size)
+    Consuming --> Committing: Flush threshold reached (row count, time or size)
     Committing --> Online: Segment finalized, indexes built, uploaded to deep store, metadata published
     Online --> Reloading: Operator triggers reload (new index config, schema change)
     Reloading --> Online: Reload complete, new indexes active
-    Online --> Replaced: Backfill push, consistent push, or merge-rollup task replaces segment
+    Online --> Replaced: Backfill push, consistent push or merge-rollup task replaces segment
     Replaced --> [*]: Old segment data cleaned up from servers and deep store
     Online --> Dropped: Retention policy expires segment or operator deletes explicitly
-    Dropped --> [*]: Segment removed from servers, deep store, and ZooKeeper metadata
+    Dropped --> [*]: Segment removed from servers, deep store and ZooKeeper metadata
     [*] --> Online: Offline segment pushed directly via batch ingestion
 ```
 
@@ -113,12 +113,12 @@ Online segments are loaded using memory mapped files (`mmap`) by default. This m
 
 ### The Reloading State
 
-When an operator adds a new index to the table configuration (for example, adding an inverted index on a new column) and triggers a reload, each server reprocesses its segments to build the new indexes. The operation is performed segment by segment on each server and causes zero downtime: the existing segment continues serving queries until the new version is ready. A reload can be resource intensive for tables with many segments or segments with many columns, and it can be targeted to a single segment, all segments of a table or all tables on the server.
+When an operator adds a new index to the table configuration (for example, adding an inverted index on a new column) and triggers a reload, each server reprocesses its segments to build the new indexes. The operation is performed segment by segment on each server and causes zero downtime: the existing segment continues serving queries until the new version is ready. A reload can be resource intensive for tables with many segments or segments with many columns and it can be targeted to a single segment, all segments of a table or all tables on the server.
 
 ### The Replaced State
 Segments can be replaced through several mechanisms without disrupting query traffic.
 
-A batch job can push new segments that cover the same time range as existing segments, and Pinot atomically swaps the old segments for the new ones. Minion tasks can combine multiple small segments into fewer, larger segments, automatically replacing the originals. When historical data is corrected or enriched, new segments replace the previous version through a backfill operation.
+A batch job can push new segments that cover the same time range as existing segments and Pinot atomically swaps the old segments for the new ones. Minion tasks can combine multiple small segments into fewer, larger segments, automatically replacing the originals. When historical data is corrected or enriched, new segments replace the previous version through a backfill operation.
 
 > [!TIP]
 > Segment replacement is an **atomic operation** at the metadata level. The routing table switches from old segments to new segments in a single update, guaranteeing that queries never see a mix of old and new data for the same time range.
@@ -174,7 +174,7 @@ These are starting guidelines, not absolute rules. The optimal segment size depe
 
 When segments are too small (e.g. under 10,000 rows or a few megabytes), several problems compound.
 
-Every segment has metadata in ZooKeeper, so thousands or millions of tiny segments create significant metadata management overhead, slowing down ZooKeeper and increasing memory usage on controllers and brokers. Brokers must evaluate each segment for pruning and construct routing plans. More segments mean more routing computation per query, even if most segments are pruned. If many small segments end up on the same server, the server must open, scan and merge results from many segment files instead of a few large ones, increasing per query overhead. Each loaded segment requires open file handles, and thousands of tiny segments can exhaust OS file descriptor limits. Each segment is also a separate object in the deep store (e.g. S3 or GCS), and millions of tiny objects create storage management overhead.
+Every segment has metadata in ZooKeeper, so thousands or millions of tiny segments create significant metadata management overhead, slowing down ZooKeeper and increasing memory usage on controllers and brokers. Brokers must evaluate each segment for pruning and construct routing plans. More segments mean more routing computation per query, even if most segments are pruned. If many small segments end up on the same server, the server must open, scan and merge results from many segment files instead of a few large ones, increasing per query overhead. Each loaded segment requires open file handles and thousands of tiny segments can exhaust OS file descriptor limits. Each segment is also a separate object in the deep store (e.g. S3 or GCS) and millions of tiny objects create storage management overhead.
 
 > [!WARNING]
 > Low volume realtime tables with aggressive row count thresholds can produce thousands of segments per day, each containing only a few hundred rows. Always validate that your flush thresholds produce reasonably sized segments under your actual data arrival rate.
@@ -328,7 +328,7 @@ For organizations with mixed criticality workloads.
 ```
 Tier 1: Customer Facing Cluster
 ├── Strict SLAs, dedicated hardware, conservative upgrade policy
-├── Tables powering real time dashboards, alerting, and customer APIs
+├── Tables powering real time dashboards, alerting and customer APIs
 └── Independent ZooKeeper ensemble
 
 Tier 2: Internal Analytics Cluster
@@ -338,7 +338,7 @@ Tier 2: Internal Analytics Cluster
 
 Tier 3: Experimental/Staging Cluster
 ├── No SLAs, minimal hardware, latest Pinot version
-├── Tables for testing new schemas, indexes, and features
+├── Tables for testing new schemas, indexes and features
 └── Independent ZooKeeper ensemble
 ```
 
@@ -380,7 +380,7 @@ Avoid these common storage and configuration mistakes when operating your cluste
 
 **Producing pathological numbers of tiny segments** is the single most common storage model mistake. Low volume realtime tables with aggressive row count thresholds can produce thousands of segments per day, each containing only a few hundred rows. Always validate that your flush thresholds produce reasonably sized segments under your actual data arrival rate.
 
-**Assuming all tables deserve the same placement policy** leads to resource contention. A 10GB dimension table and a 10TB fact table have very different resource requirements, and placing them on the same servers without thought creates problems under load.
+**Assuming all tables deserve the same placement policy** leads to resource contention. A 10GB dimension table and a 10TB fact table have very different resource requirements and placing them on the same servers without thought creates problems under load.
 
 **Treating segment reload and replacement as rare events** produces brittle operational processes. In a well operated Pinot cluster, reloads happen regularly (adding indexes, schema evolution) and replacements happen frequently (merge rollup, backfills). Design operational processes and capacity plans assuming these operations happen routinely, not exceptionally.
 

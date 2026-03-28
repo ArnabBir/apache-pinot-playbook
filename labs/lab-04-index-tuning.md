@@ -7,7 +7,6 @@ This lab develops the most consequential intuition in Pinot performance engineer
 > [!NOTE]
 > Lab 3 must be complete and data must be present in the `trip_events` table before running the live queries in this lab.
 
----
 
 ## Learning Objectives
 
@@ -19,11 +18,10 @@ This lab develops the most consequential intuition in Pinot performance engineer
 | Measure query efficiency via BrokerResponse | You can compare `numEntriesScannedInFilter` across indexed and non-indexed queries |
 | Apply the index selection framework | Given a column and query pattern, you can choose the correct index type |
 
----
 
 ## The Index Decision Framework
 
-Before touching any configuration, internalize this decision framework. Every index choice is a trade-off between write-time overhead, storage cost, and read-time acceleration. Apply this flowchart to any column you are considering indexing.
+Before touching any configuration, internalize this decision framework. Every index choice is a trade-off between write-time overhead, storage cost and read-time acceleration. Apply this flowchart to any column you are considering indexing.
 
 ```mermaid
 flowchart TD
@@ -43,7 +41,6 @@ flowchart TD
     star --> done4["Star-tree\nwith supporting inverted index"]
 ```
 
----
 
 ## How Each Index Works
 
@@ -78,7 +75,6 @@ flowchart TB
     end
 ```
 
----
 
 ## Index Configuration in This Repository
 
@@ -140,7 +136,6 @@ Study the index sections across the three table configurations. The choices refl
 | `trip_state` | Similar to trip_events, narrower bloom filter set | Current-state queries need fast equality lookups on IDs and time-range pruning |
 | `merchants_dim` | Sorted column plus star-tree | Dimension table has a predictable GROUP BY pattern — star-tree pre-aggregates the common aggregations entirely |
 
----
 
 ## Step-by-Step Instructions
 
@@ -154,7 +149,6 @@ This simulation demonstrates how the Broker eliminates segments before they ever
 
 **Study the output.** For each query scenario, note how the number of segments queried compares to the total segment count. A well-designed time column and retention policy routinely prunes 90 percent or more of segments for recent-data queries.
 
----
 
 ### Step 2 — Run the Star-Tree Simulation
 
@@ -166,7 +160,6 @@ This simulation contrasts two aggregation paths: a full row scan and a star-tree
 
 **Study the output.** Observe the row-scan count in the non-star-tree path versus the node count traversed in the star-tree path. The star-tree materializes aggregates at build time and retrieves them in a tree traversal at query time. The work shifts from query time to index build time.
 
----
 
 ### Step 3 — Run the Segment Pruning SQL
 
@@ -187,7 +180,6 @@ This query applies a time predicate against the live `trip_events` table and ret
 
 A large gap between `numSegmentsQueried` and `numSegmentsMatched` confirms that the Broker's time-range pruning is working. If the values are equal, the time predicate is not aligning with segment boundaries. Investigate whether `event_time_ms` is correctly configured as the time column.
 
----
 
 ### Step 4 — Compare Indexed vs Non-Indexed Query Performance
 
@@ -248,7 +240,6 @@ Fill this table as you run each query:
 
 The difference in `numEntriesScannedInFilter` between Query A and Query B quantifies the advantage of an inverted index over a bloom filter for equality predicates. The difference in `numDocsScanned` for Query D compared to full-table scans quantifies the value of segment pruning.
 
----
 
 ### Step 5 — Use EXPLAIN PLAN to Inspect Index Selection
 
@@ -261,17 +252,15 @@ SELECT city, COUNT(*) FROM merchants_dim GROUP BY city
 
 The plan output will show whether Pinot selected the star-tree path. When `StarTreeDocIdSet` appears in the plan, the query is reading from pre-aggregated tree nodes rather than scanning raw rows. When you see `FullScanDocIdSet` or `FilteredDocIdSet` with full row counts, the star-tree was not selected. This usually happens because the query dimensions or functions do not match the star-tree's configured `dimensionsSplitOrder` or `functionColumnPairs`.
 
----
 
 ### Step 6 — View Index Configuration in the Controller UI
 
 Navigate to **http://localhost:9000** and click on Tables in the left sidebar.
 
-**trip_events table.** Click the Table Config tab and scroll to `tableIndexConfig`. Confirm the inverted index columns, range index columns, and bloom filter columns match the configuration excerpt shown earlier in this lab.
+**trip_events table.** Click the Table Config tab and scroll to `tableIndexConfig`. Confirm the inverted index columns, range index columns and bloom filter columns match the configuration excerpt shown earlier in this lab.
 
 **merchants_dim table.** Click the Table Config tab and scroll to `tableIndexConfig`. Locate the `starTreeIndexConfigs` section. Note the `dimensionsSplitOrder`. This is the hierarchy the star-tree traverses from root to leaf. The `functionColumnPairs` enumerate every aggregation that the star-tree pre-materializes. Queries that include all these dimensions and only these functions will receive the full star-tree benefit.
 
----
 
 ## Segment Pruning Architecture
 
@@ -303,14 +292,13 @@ sequenceDiagram
     Broker-->>Client: Final result\nnumSegmentsQueried=8\nnumSegmentsMatched=4\nnumSegmentsPrunedByBroker=4
 ```
 
----
 
 ## Step 7 — Direct A/B Index Testing with `SET skipIndexes`
 
 > [!TIP]
 > This is the most instructive technique in the StarTree playbook. The `SET skipIndexes` query hint forces Pinot to bypass a specific index on a specific column for a single query execution. Running the same query with and without the hint gives you a controlled measurement of exactly what that index contributes. No guesswork, no approximation.
 
-Open the Query Console at **http://localhost:9000/#/query** and run each pair. Record `numDocsScanned`, `numEntriesScannedInFilter`, and `timeUsedMs` for both variants.
+Open the Query Console at **http://localhost:9000/#/query** and run each pair. Record `numDocsScanned`, `numEntriesScannedInFilter` and `timeUsedMs` for both variants.
 
 **Test 1 — Inverted index on `city`**
 
@@ -381,12 +369,11 @@ SELECT city, vertical, COUNT(*), SUM(monthly_orders) FROM merchants_dim GROUP BY
 | 3 | Range (`fare_amount`) | | | | | |
 | 4 | Star-tree (`merchants_dim`) | | | | | |
 
-The `SET skipIndexes` syntax accepts comma-separated entries in the format `columnName=indexType`. Valid index type names are `inverted`, `range`, `bloomFilter`, `startree`, `text`, `fst`, `json`, and `sorted`.
+The `SET skipIndexes` syntax accepts comma-separated entries in the format `columnName=indexType`. Valid index type names are `inverted`, `range`, `bloomFilter`, `startree`, `text`, `fst`, `json` and `sorted`.
 
 > [!NOTE]
 > `SET skipIndexes` works per-query and has no side effects on the table configuration. It is safe to run in production for diagnostic purposes. It does not modify any stored indexes or segment files.
 
----
 
 ## Index Selection Reference
 
@@ -399,9 +386,8 @@ The `SET skipIndexes` syntax accepts comma-separated entries in the format `colu
 | Sorted column | Range queries where data arrives pre-sorted | Tables where the sort column changes frequently | Low |
 
 > [!TIP]
-> Index decisions should follow query profiling, not intuition. Run your most frequent and most expensive queries first, examine their BrokerResponse statistics, and add indexes only where the data shows the cost is justified.
+> Index decisions should follow query profiling, not intuition. Run your most frequent and most expensive queries first, examine their BrokerResponse statistics and add indexes only where the data shows the cost is justified.
 
----
 
 ## Reflection Prompts
 
@@ -413,6 +399,5 @@ The `SET skipIndexes` syntax accepts comma-separated entries in the format `colu
 
 4. You observe that `numSegmentsPrunedByBroker` is always zero for queries against `trip_events`, even when the time predicate is highly restrictive. What is the most likely cause and how would you diagnose it?
 
----
 
 [Previous: Lab 3 — Stream Ingestion](lab-03-stream-ingestion.md) | [Next: Lab 5 — Upsert and CDC](lab-05-upsert-cdc.md)

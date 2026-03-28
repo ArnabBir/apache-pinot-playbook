@@ -39,7 +39,7 @@ Every chapter in this guide follows a deliberate pattern.
 
 ### Opinionated by Design
 
-Where the official documentation presents options neutrally, this guide tells you which option to pick and why. Rather than staying on the happy path, it walks through failure modes, edge cases and the tradeoffs that only surface under production load. Every recommendation names its tradeoff, and every design pattern comes with the context needed to decide whether it applies to a given situation.
+Where the official documentation presents options neutrally, this guide tells you which option to pick and why. Rather than staying on the happy path, it walks through failure modes, edge cases and the tradeoffs that only surface under production load. Every recommendation names its tradeoff and every design pattern comes with the context needed to decide whether it applies to a given situation.
 
 ### The Companion Repository
 
@@ -210,7 +210,7 @@ The [Apache Pinot Official Documentation](https://docs.pinot.apache.org/) is the
 
 ## Video Resources
 
-Video content can be particularly helpful for building intuition about distributed systems concepts. [Apache Pinot: Introduction](https://www.youtube.com/watch?v=T70jnJzS2Ks) offers a comprehensive overview of Pinot's architecture, design goals and core capabilities, and is the best starting point if you prefer visual learning. [Real-Time Analytics with Apache Pinot](https://www.youtube.com/watch?v=JV0WxBwJqKE) dives deeper into real time ingestion patterns, query execution and the performance characteristics that make Pinot unique in the analytics landscape.
+Video content can be particularly helpful for building intuition about distributed systems concepts. [Apache Pinot: Introduction](https://www.youtube.com/watch?v=T70jnJzS2Ks) offers a comprehensive overview of Pinot's architecture, design goals and core capabilities and is the best starting point if you prefer visual learning. [Real-Time Analytics with Apache Pinot](https://www.youtube.com/watch?v=JV0WxBwJqKE) dives deeper into real time ingestion patterns, query execution and the performance characteristics that make Pinot unique in the analytics landscape.
 
 ## What This Guide Does Not Try to Do
 

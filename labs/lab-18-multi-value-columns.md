@@ -4,14 +4,13 @@
 
 Most database systems require a normalized child table to represent a one-to-many relationship between a row and a list of values. Apache Pinot offers a native alternative: the multi-value (MV) column. An MV column stores a variable-length array of values directly within a single row, eliminating the join and enabling a specialized set of aggregate and filter functions that operate across the entire array in a single pass.
 
-The canonical use cases are tag arrays, label lists, route waypoint sequences, product category memberships, and any scenario where a fact event naturally carries a set of scalar descriptors. In the ride-hailing dataset, each trip carries service labels such as `premium`, `surge`, `airport`, and `corporate`. These are attributes that influence pricing, driver matching, and downstream analytics. Storing these as an MV column keeps the row self-contained and makes both filtering and aggregation straightforward.
+The canonical use cases are tag arrays, label lists, route waypoint sequences, product category memberships and any scenario where a fact event naturally carries a set of scalar descriptors. In the ride-hailing dataset, each trip carries service labels such as `premium`, `surge`, `airport` and `corporate`. These are attributes that influence pricing, driver matching and downstream analytics. Storing these as an MV column keeps the row self-contained and makes both filtering and aggregation straightforward.
 
-This lab adds two MV columns to the `trip_events` schema, ingests representative data, and demonstrates the complete vocabulary of MV-specific query functions. By the end you will have measured the behavioral difference between grouping on a single-value column and grouping on an MV column, and you will have the reference material needed to choose between MV columns and JSON columns for new data model decisions.
+This lab adds two MV columns to the `trip_events` schema, ingests representative data and demonstrates the complete vocabulary of MV-specific query functions. By the end you will have measured the behavioral difference between grouping on a single-value column and grouping on an MV column and you will have the reference material needed to choose between MV columns and JSON columns for new data model decisions.
 
 > [!NOTE]
 > Lab 3 must be complete and data must be present in `trip_events` before this lab. The Kafka broker must be running at `localhost:9092`.
 
----
 
 ## Learning Objectives
 
@@ -24,11 +23,10 @@ This lab adds two MV columns to the `trip_events` schema, ingests representative
 | Explain GROUP BY fan-out behavior on MV columns | You can predict how many result rows a GROUP BY on an MV column produces |
 | Choose between MV columns and JSON columns | Given a new data requirement, you can state which storage model is more appropriate and why |
 
----
 
 ## MV Column Architecture
 
-The following diagram contrasts the internal storage of a single-value column against an MV column, and shows how the inverted index is extended to cover the MV case.
+The following diagram contrasts the internal storage of a single-value column against an MV column and shows how the inverted index is extended to cover the MV case.
 
 ```mermaid
 flowchart TB
@@ -73,7 +71,6 @@ flowchart TB
 
 The inverted index on an MV column maps each distinct value in the value space to the set of row IDs that contain it somewhere in their array. A row with three labels contributes its row ID to three separate posting lists. When a query filters by `valueIn(service_labels, 'premium')`, Pinot looks up the `premium` posting list and immediately produces the matching row ID set without scanning any raw values. This is the same execution model as SV inverted index lookup. The extension is transparent to the query engine once the inverted index is built.
 
----
 
 ## Step 1: Add the `service_labels` MV Column to the Schema
 
@@ -149,7 +146,6 @@ Expected output:
 > [!NOTE]
 > Adding a column to the schema makes it available for ingestion immediately. Existing segments that were created before the schema update will serve `null` for this column. Only newly ingested data will carry non-null MV values.
 
----
 
 ## Step 2: Ingest Sample Events with the MV Field
 
@@ -203,7 +199,6 @@ Expected output (result rows section):
 
 The `columnDataTypes` field reporting `STRING_ARRAY` confirms that Pinot has recognized the column as multi-value.
 
----
 
 ## Step 3: Basic MV Queries
 
@@ -283,13 +278,12 @@ WHERE arrayLength(valueIn(service_labels, 'premium', 'surge')) > 0
 LIMIT 10
 ```
 
-Expected result: All three trips that carry `premium`, `surge`, or both — `trip_000001`, `trip_000003`, and `trip_000005`.
+Expected result: All three trips that carry `premium`, `surge` or both — `trip_000001`, `trip_000003` and `trip_000005`.
 
----
 
 ## Step 4: Aggregate MV Functions on a Numeric MV Column
 
-Add an `hourly_fares` column of type `DOUBLE` with `singleValueField: false` to the schema. This column simulates multiple fare components recorded for a single trip. For example, base fare, surge component, and toll component can be stored together.
+Add an `hourly_fares` column of type `DOUBLE` with `singleValueField: false` to the schema. This column simulates multiple fare components recorded for a single trip. For example, base fare, surge component and toll component can be stored together.
 
 ```json
 {
@@ -325,7 +319,7 @@ Ingest sample records that include `hourly_fares` arrays.
 {"trip_id":"trip_000008","city":"bangalore","fare_amount":230.0,"event_time_ms":1706745670000,"event_type":"trip_completed","service_labels":["corporate"],"hourly_fares":[80.0,90.0,60.0]}
 ```
 
-### Sum, Average, Min, and Max Across MV Values
+### Sum, Average, Min and Max Across MV Values
 
 ```sql
 SELECT
@@ -383,11 +377,10 @@ Expected result:
 | trip_000007 | 8.0        |
 | trip_000008 | 30.0       |
 
----
 
 ## Step 5: GROUP BY with MV Columns
 
-Grouping by an MV column produces fan-out behavior. Each value in a row's array creates a separate group entry, and the row's metric values are attributed to every group entry for that row. A row with three labels and a `fare_amount` of 312.0 contributes 312.0 to the `SUM(fare_amount)` for each of its three label groups independently.
+Grouping by an MV column produces fan-out behavior. Each value in a row's array creates a separate group entry and the row's metric values are attributed to every group entry for that row. A row with three labels and a `fare_amount` of 312.0 contributes 312.0 to the `SUM(fare_amount)` for each of its three label groups independently.
 
 ```sql
 SELECT
@@ -411,7 +404,7 @@ Expected result:
 | airport        | 1          | 245.5 |
 | pool           | 1          | 120.0 |
 
-Observe that `trip_000005` (fare: 312.0, labels: premium, surge, corporate) contributes 312.0 to the `gmv` of `premium`, `surge`, and `corporate` independently. The total of all `gmv` values in this result set therefore exceeds the actual sum of all trip fares. This is expected and intentional — when you group by an MV column, you are asking for attribution per label, not a deduplicated sum.
+Observe that `trip_000005` (fare: 312.0, labels: premium, surge, corporate) contributes 312.0 to the `gmv` of `premium`, `surge` and `corporate` independently. The total of all `gmv` values in this result set therefore exceeds the actual sum of all trip fares. This is expected and intentional — when you group by an MV column, you are asking for attribution per label, not a deduplicated sum.
 
 ### Group By City and Label Together
 
@@ -428,7 +421,6 @@ LIMIT 20
 
 Expected result: Each unique (city, label) pair appears as a separate row. Mumbai + premium appears once because `trip_000001` is the only Mumbai trip carrying the `premium` label in the sample dataset. Delhi + premium appears once (from `trip_000005`).
 
----
 
 ## Step 6: `distinctCountMV` vs `distinctCountBitmapMV`
 
@@ -460,11 +452,10 @@ For six distinct labels, both functions agree. At large scale — millions of di
 | Exact count required by SLA | Yes | No |
 | Aggregation inside a star-tree | Configure `DISTINCTCOUNT__col` | Configure `DISTINCTCOUNTBITMAP__col` |
 
----
 
 ## MV Function Reference Table
 
-The table below covers every MV-specific function available in Apache Pinot SQL, with its syntax, description, and the single-value equivalent where one exists.
+The table below covers every MV-specific function available in Apache Pinot SQL, with its syntax, description and the single-value equivalent where one exists.
 
 | Function | Syntax | Description | SV Equivalent |
 |----------|--------|-------------|---------------|
@@ -482,18 +473,17 @@ The table below covers every MV-specific function available in Apache Pinot SQL,
 | `arrayLength` | `arrayLength(col)` | Number of elements in the array stored in each row; returns an integer per row | None — no equivalent for SV |
 | `valueIn` | `valueIn(col, v1, v2, ...)` | Returns a filtered sub-array containing only the specified values; used in WHERE predicates and as an expression | None — use equality for SV |
 
----
 
 ## When to Use MV Columns vs JSON Columns
 
-Both MV columns and JSON columns can represent variable-length structured data attached to a fact row. The choice between them has significant consequences for query expressibility, index support, and schema flexibility.
+Both MV columns and JSON columns can represent variable-length structured data attached to a fact row. The choice between them has significant consequences for query expressibility, index support and schema flexibility.
 
 | Characteristic | MV Column | JSON Column |
 |----------------|-----------|-------------|
 | Value types | All values in the array must share the same data type | Values at different JSON paths can have different types |
 | Schema requirement | Column and type declared at schema definition time | Column declared, but internal path structure is schema-free |
 | Inverted index support | Full inverted index on MV values; `valueIn` uses the index directly | JSON index maps paths to values; `json_match` uses it |
-| Aggregate functions | Full set: `sumMV`, `avgMV`, `percentileMV`, and others | No native aggregate functions; `jsonExtractScalar` extracts before aggregating |
+| Aggregate functions | Full set: `sumMV`, `avgMV`, `percentileMV` and others | No native aggregate functions; `jsonExtractScalar` extracts before aggregating |
 | Filter ergonomics | `WHERE valueIn(col, 'val') = 'val'` — direct predicate | `WHERE json_match(col, '"$.path" = ''val''')` — path syntax required |
 | GROUP BY behavior | Fan-out: each array value creates a separate group entry | Requires `jsonExtractScalar` in GROUP BY; no fan-out |
 | Ideal use case | Tags, labels, categories, waypoints — uniform type, analytics-heavy | Nested payment metadata, device info, arbitrary event properties |
@@ -502,18 +492,16 @@ Both MV columns and JSON columns can represent variable-length structured data a
 
 The guidance is: use an MV column when the data is a flat set of homogeneous values that will be filtered and aggregated directly. Use a JSON column when the data is a nested document with heterogeneous types or paths that are not known in advance.
 
----
 
 ## Reflection Prompts
 
-1. The GROUP BY query in Step 5 shows that `trip_000005` contributes its `fare_amount` to three separate label groups. A business analyst interprets this as meaning that the company earned three times the actual fare from that trip. Explain the correct interpretation of attribution in MV GROUP BY results, and describe the query pattern that would give the analyst an accurate per-label GMV figure that avoids double-counting.
+1. The GROUP BY query in Step 5 shows that `trip_000005` contributes its `fare_amount` to three separate label groups. A business analyst interprets this as meaning that the company earned three times the actual fare from that trip. Explain the correct interpretation of attribution in MV GROUP BY results and describe the query pattern that would give the analyst an accurate per-label GMV figure that avoids double-counting.
 
 2. The `valueIn(service_labels, 'premium')` predicate can use the MV inverted index, while `arrayLength(service_labels) > 1` cannot use any index and requires scanning the forward index for every row. Explain why this is the case in terms of how the inverted index is structured for MV columns.
 
-3. You have a new requirement: store the sequence of GPS waypoints for each trip as a multi-value column of DOUBLE pairs (latitude, longitude). Why is an MV column of DOUBLE inadequate for this purpose, and what alternative data model would you propose?
+3. You have a new requirement: store the sequence of GPS waypoints for each trip as a multi-value column of DOUBLE pairs (latitude, longitude). Why is an MV column of DOUBLE inadequate for this purpose and what alternative data model would you propose?
 
 4. `percentileMV(hourly_fares, 90)` computes the 90th percentile across the values within a single row's array. If you instead need the 90th percentile of the `maxMV` value across all rows in the table, write the SQL that achieves this and explain why a simple `percentileMV` on the table cannot produce that result.
 
----
 
 [Previous: Lab 17 — Real-Time Dashboard Integration with Grafana](lab-17-grafana-integration.md) | [Next: Lab 19 — JSON Index and Full-Text Search](lab-19-json-text-index.md)

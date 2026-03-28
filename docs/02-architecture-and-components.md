@@ -450,7 +450,6 @@ sequenceDiagram
 | **10. Final Processing** | Broker applies final operations: ORDER BY re-sorting across merged results, LIMIT truncation, HAVING clause filtering on aggregated values. |
 | **11. Response** | Broker constructs BrokerResponse containing result table, execution statistics (segments scanned, docs scanned, time used) and any exceptions, then returns to client. |
 
----
 
 ## The Lifecycle of a Segment
 
@@ -461,9 +460,9 @@ stateDiagram-v2
     [*] --> Consuming: Server starts consuming from stream partition
     Consuming --> Committing: Flush threshold reached (rows or time)
     Committing --> Online: Segment built, indexes created, metadata published to ZK
-    Online --> Reloading: Index change, schema evolution, or operator-triggered reload
+    Online --> Reloading: Index change, schema evolution or operator-triggered reload
     Reloading --> Online: Reload complete, new indexes available
-    Online --> Replaced: Backfill, consistent-push, or merge-rollup replaces segment
+    Online --> Replaced: Backfill, consistent-push or merge-rollup replaces segment
     Replaced --> [*]: Old segment cleaned up
     Online --> Dropped: Retention policy expires segment or operator deletes it
     Dropped --> [*]: Segment removed from servers and metadata
