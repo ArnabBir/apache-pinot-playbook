@@ -144,7 +144,7 @@ The `sql/` directory houses SQL query packs organized by topic. These are ready-
 
 The `src/pinot_playbook_demo/` directory is the Python package that accompanies the book. It includes utility code for data generation, Pinot client wrappers and helper scripts used throughout the labs.
 
-The `labs/` directory contains hands-on lab exercises with step by step instructions. Each lab is self-contained and maps to one or more chapters. The capstone lab in Chapter 21 ties everything together.
+The `labs/` directory contains hands on lab exercises with step by step instructions. Each lab is self-contained and maps to one or more chapters. The capstone lab in Chapter 21 ties everything together.
 
 The `jobs/` directory stores batch ingestion job specifications. These are the YAML and JSON files that define segment generation and push tasks for offline tables. Referenced in Chapter 07.
 

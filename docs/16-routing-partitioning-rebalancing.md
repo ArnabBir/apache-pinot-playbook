@@ -74,7 +74,7 @@ Segment pruning is the single most important performance optimization that Pinot
 
 Every segment in Pinot tracks the minimum and maximum values of the time column. When a query includes a time range predicate, the broker compares that predicate against each segment's time boundaries.
 
-For time pruning to work well, the time column must be declared in the schema's `dateTimeFieldSpecs` and referenced in the table configuration's `segmentsConfig.timeColumnName`. Queries should include explicit time range predicates, and segment granularity should align with common query time ranges.
+For time pruning to work well, the time column must be declared in the schema's `dateTimeFieldSpecs` and referenced in the table configuration's `segmentsConfig.timeColumnName`. Queries should include explicit time range predicates and segment granularity should align with common query time ranges.
 
 ### Partition-Based Pruning
 
@@ -254,7 +254,7 @@ Rebalancing is the process of redistributing segments across servers to restore 
 
 ### When to Rebalance
 
-Common triggers for rebalancing include adding servers (which join the cluster with no segments), removing servers before decommissioning them, changing the replication factor (for example from 2 to 3), changing tenant tags when a table's tenant assignment changes, and correcting skew that has accumulated over time as segment assignment becomes uneven.
+Common triggers for rebalancing include adding servers (which join the cluster with no segments), removing servers before decommissioning them, changing the replication factor (for example from 2 to 3), changing tenant tags when a table's tenant assignment changes and correcting skew that has accumulated over time as segment assignment becomes uneven.
 
 ### Rebalancing via the Controller API
 

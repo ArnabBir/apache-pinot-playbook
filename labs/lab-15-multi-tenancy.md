@@ -4,14 +4,13 @@
 
 A production Apache Pinot cluster serves multiple teams simultaneously. An analytics team running hour-long exploration queries shares the same physical hardware as a product team serving sub-100ms dashboard requests. Without workload isolation, a single expensive query can saturate shared server CPU and destroy latency for every other caller on the cluster.
 
-Pinot's tenant model solves this problem through tagged resource pools. Servers and brokers are assigned tenant names using the Controller API. Tables are then bound to specific tenant names so that their segments are placed exclusively on servers belonging to that tenant's pool, and their queries are routed exclusively through brokers belonging to that tenant's pool. The result is logical multi-tenancy on a single physical cluster. No separate clusters, no separate ZooKeeper, no duplicated infrastructure overhead.
+Pinot's tenant model solves this problem through tagged resource pools. Servers and brokers are assigned tenant names using the Controller API. Tables are then bound to specific tenant names so that their segments are placed exclusively on servers belonging to that tenant's pool and their queries are routed exclusively through brokers belonging to that tenant's pool. The result is logical multi-tenancy on a single physical cluster. No separate clusters, no separate ZooKeeper, no duplicated infrastructure overhead.
 
-This lab walks through the complete tenant setup process for a two-team scenario: `team_rides`, which owns the high-throughput realtime tables, and `team_merchants`, which owns the offline dimension table. You will tag servers and brokers, bind tables to tenant pools, verify segment placement through the Controller API, and observe query latency isolation under load.
+This lab walks through the complete tenant setup process for a two-team scenario: `team_rides`, which owns the high-throughput realtime tables and `team_merchants`, which owns the offline dimension table. You will tag servers and brokers, bind tables to tenant pools, verify segment placement through the Controller API and observe query latency isolation under load.
 
 > [!NOTE]
-> This lab builds on the cluster and tables from Labs 1 through 4. The `trip_events`, `trip_state`, and `merchants_dim` tables must exist before beginning.
+> This lab builds on the cluster and tables from Labs 1 through 4. The `trip_events`, `trip_state` and `merchants_dim` tables must exist before beginning.
 
----
 
 ## Learning Objectives
 
@@ -24,7 +23,6 @@ This lab walks through the complete tenant setup process for a two-team scenario
 | Observe workload isolation | Query latency on `team_merchants` remains stable while `team_rides` is under load |
 | Choose between tenant isolation and cluster isolation | Given a set of business requirements, you can select the right strategy from the decision table |
 
----
 
 ## The Multi-Tenant Architecture
 
@@ -74,7 +72,6 @@ flowchart TB
 
 The critical property of this topology is that the two query paths never converge below the broker level. A long-running analytical query from the rides team saturates Server 1 and Server 2. Server 3, which belongs exclusively to the merchants tenant, is never touched by that query. The merchants team sees no latency degradation.
 
----
 
 ## Tenant vs Cluster Isolation Decision Table
 
@@ -92,9 +89,8 @@ Before implementing tenancy, evaluate whether tenant-level isolation satisfies y
 | Compliance requirement for data segregation | Insufficient if network-level isolation is required | Satisfies strict data segregation requirements |
 | Operational complexity | Medium — one cluster to operate | High — N clusters to operate |
 
-Choose tenant isolation when teams share the same compliance domain, the number of servers per team is under 100, and cross-tenant analytics have value. Choose separate clusters when regulatory requirements demand network-level data segregation or when one team's failure mode must be completely contained from another.
+Choose tenant isolation when teams share the same compliance domain, the number of servers per team is under 100 and cross-tenant analytics have value. Choose separate clusters when regulatory requirements demand network-level data segregation or when one team's failure mode must be completely contained from another.
 
----
 
 ## Step 1: List Current Server and Broker Tenants
 
@@ -133,7 +129,6 @@ Record the instance names returned by this call. You will need them in Step 2.
 |  |  | DefaultTenant |
 |  |  | DefaultTenant |
 
----
 
 ## Step 2: Tag Servers with Custom Tenant Names
 
@@ -194,7 +189,6 @@ Look for the `tags` field in the response. It should contain your new tenant tag
 > [!NOTE]
 > In the local Docker environment, all components run on a single machine and there is typically one server instance. In a multi-node production cluster, you would apply `team_rides` tags to your high-memory NVMe nodes and `team_merchants` tags to standard compute nodes, creating distinct physical pools.
 
----
 
 ## Step 3: Create a Table Assigned to the Custom Tenant
 
@@ -272,7 +266,6 @@ Expected output:
 },
 ```
 
----
 
 ## Step 4: Verify Segment Placement
 
@@ -298,7 +291,7 @@ Each segment entry in the response includes a `segmentMetadata` block containing
 
 Confirm that every segment in the response lists only instance names that carry the `team_rides_REALTIME` tag. If any segment appears on an instance with a different tag, the tenant configuration was not applied correctly. Re-examine Step 2 and verify the instance tags before proceeding.
 
-You can also verify this through the Controller UI. Navigate to **http://localhost:9000**, click Tables, select `trip_events_premium_REALTIME`, and click the Segments tab. Each segment row shows its hosting server. Cross-reference those server names against the instance tags you applied in Step 2.
+You can also verify this through the Controller UI. Navigate to **http://localhost:9000**, click Tables, select `trip_events_premium_REALTIME` and click the Segments tab. Each segment row shows its hosting server. Cross-reference those server names against the instance tags you applied in Step 2.
 
 **Expected placement verification output:**
 
@@ -306,7 +299,6 @@ You can also verify this through the Controller UI. Navigate to **http://localho
 |-------------|---------------|-------------------|:-----------------:|
 | trip_events_premium__0__0__* | Server_localhost_8098 | team_rides_REALTIME | Yes |
 
----
 
 ## Step 5: Demonstrate Workload Isolation
 
@@ -384,11 +376,10 @@ Fill in the measurement table:
 
 In a correctly configured multi-tenant cluster with separate physical server pools, the `During rides load` latency should be statistically indistinguishable from the baseline. In the local single-server environment, you may observe some contention because both tenant pools share one physical machine. This contention is the problem that physical server pool separation solves in production.
 
----
 
 ## Tenant Configuration Reference
 
-The following table documents all tenant-related API endpoints on the Pinot Controller, organized by operation category.
+The following table documents all tenant-related API endpoints on the Pinot Controller organized by operation category.
 
 | Endpoint | HTTP Method | Purpose | Key Parameters |
 |----------|:-----------:|---------|---------------|
@@ -404,11 +395,10 @@ The following table documents all tenant-related API endpoints on the Pinot Cont
 | `/segments/{tableName}/metadata` | GET | List all segments and their hosting servers | Verify placement matches expected tenant servers |
 | `/tables/{tableName}/rebalance` | POST | Trigger segment rebalance after tag changes | `reassignInstances=true` to move segments |
 
----
 
 ## The Resource Isolation Matrix
 
-This matrix formalizes the trade-off between tenant isolation within a cluster and full cluster isolation. Use it when a business stakeholder asks why the platform chose one approach over the other, or when evaluating a new team's onboarding requirements.
+This matrix formalizes the trade-off between tenant isolation within a cluster and full cluster isolation. Use it when a business stakeholder asks why the platform chose one approach over the other or when evaluating a new team's onboarding requirements.
 
 | Dimension | Tenant Isolation | Separate Cluster |
 |-----------|-----------------|-----------------|
@@ -419,23 +409,21 @@ This matrix formalizes the trade-off between tenant isolation within a cluster a
 | Cross-tenant analytics | Supported through Multi-Stage Engine JOINs | Requires ETL pipeline to copy data between clusters |
 | Time to onboard a new team | Minutes — tag instances and create tables | Days — provision new cluster, configure Kafka connectors |
 | Operator headcount | One team operates one cluster | Scales linearly with number of clusters |
-| Recommended team size | Up to 10-15 internal product teams | More than 15 teams, or any team with data sovereignty requirements |
+| Recommended team size | Up to 10-15 internal product teams | More than 15 teams or any team with data sovereignty requirements |
 | Infrastructure cost at 50 servers | Optimal — shared overhead | 2-5x higher — duplicated control planes |
 
----
 
 ## Reflection Prompts
 
-1. A new team joins the platform and their most important query is a JOIN between `trip_state` (owned by `team_rides`) and a new `promotions_dim` table (owned by `team_promotions`). Both tables are assigned to separate tenant server pools. The JOIN succeeds but latency is higher than expected. What is the likely cause, and what architectural change would reduce it?
+1. A new team joins the platform and their most important query is a JOIN between `trip_state` (owned by `team_rides`) and a new `promotions_dim` table (owned by `team_promotions`). Both tables are assigned to separate tenant server pools. The JOIN succeeds but latency is higher than expected. What is the likely cause and what architectural change would reduce it?
 
-2. The Controller is a single shared component across all tenants in this lab's architecture. Describe the blast radius of a Controller failure. Which operations are affected immediately, which continue working from cached state, and which operations are unavailable until the Controller recovers?
+2. The Controller is a single shared component across all tenants in this lab's architecture. Describe the blast radius of a Controller failure. Which operations are affected immediately, which continue working from cached state and which operations are unavailable until the Controller recovers?
 
 3. You are onboarding a financial services team whose compliance requirements prohibit their query data from traversing the same network paths as other teams' data. Can Pinot's tenant model satisfy this requirement? Justify your answer with reference to the architecture diagram.
 
 4. After applying tenant tags in Step 2, you trigger a segment rebalance using `POST /tables/trip_events/rebalance`. Describe what the Controller does during this operation and how it ensures segments are moved to the correct tenant pool without serving queries from partially relocated segments.
 
-5. A server in the `team_rides` pool is decommissioned for hardware maintenance. The pool now has fewer instances than the table's configured replication factor. What does Pinot do, and what is the operator's next action to restore redundancy without disrupting query serving?
+5. A server in the `team_rides` pool is decommissioned for hardware maintenance. The pool now has fewer instances than the table's configured replication factor. What does Pinot do and what is the operator's next action to restore redundancy without disrupting query serving?
 
----
 
 [Previous: Lab 8 — SLO and Incident Drill](lab-08-slo-incident.md) | [Next: Lab 16 — Star-Tree Index Design Workshop](lab-16-star-tree-workshop.md)

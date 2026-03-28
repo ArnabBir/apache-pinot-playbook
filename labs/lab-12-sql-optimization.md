@@ -2,30 +2,28 @@
 
 ## Overview
 
-Writing a SQL query that returns correct results and writing one that returns those results efficiently are two different skills. The first requires understanding the data model. The second requires understanding how Pinot executes the query. Which indexes it selects, how many segments it contacts, how much data it moves across the network, and where in the execution pipeline the bottleneck lives all matter.
+Writing a SQL query that returns correct results and writing one that returns those results efficiently are two different skills. The first requires understanding the data model. The second requires understanding how Pinot executes the query. Which indexes it selects, how many segments it contacts, how much data it moves across the network and where in the execution pipeline the bottleneck lives all matter.
 
-This workshop develops the second skill through eight structured problems. Each problem presents a realistic query that performs poorly for a specific, diagnosable reason. Your task is to reproduce the slow behavior, identify the root cause using EXPLAIN PLAN and BrokerResponse statistics, apply the correct fix, and measure the improvement. By the end, you will have internalized a repeatable optimization methodology and a reference library of common Pinot performance anti-patterns.
+This workshop develops the second skill through eight structured problems. Each problem presents a realistic query that performs poorly for a specific, diagnosable reason. Your task is to reproduce the slow behavior, identify the root cause using EXPLAIN PLAN and BrokerResponse statistics, apply the correct fix and measure the improvement. By the end, you will have internalized a repeatable optimization methodology and a reference library of common Pinot performance anti-patterns.
 
 > [!NOTE]
-> All eight problems use the tables established in Labs 2 through 6. The `trip_events`, `trip_state`, and `merchants_dim` tables must be populated before proceeding.
+> All eight problems use the tables established in Labs 2 through 6. The `trip_events`, `trip_state` and `merchants_dim` tables must be populated before proceeding.
 
----
 
 ## Learning Objectives
 
 | Objective | Success Criterion |
 |-----------|-------------------|
 | Apply the six-step optimization methodology | You follow the same sequence — measure, explain, identify, fix, measure, compare — for every problem |
-| Read EXPLAIN PLAN output | You can identify index selection, segment pruning, and exchange operators in a query plan |
+| Read EXPLAIN PLAN output | You can identify index selection, segment pruning and exchange operators in a query plan |
 | Interpret BrokerResponse statistics | You can state which BrokerResponse field is the primary evidence for each anti-pattern |
 | Apply targeted fixes to eight query anti-patterns | Each of your eight optimized queries shows measurable improvement in the measurement table |
 | Build an optimization intuition | You can classify a new slow query into one of the eight anti-pattern categories before running EXPLAIN PLAN |
 
----
 
 ## The Optimization Methodology
 
-Every optimization attempt must follow the same sequence. Skipping steps, especially the measurement steps, produces guesswork rather than engineering. A fix that seems obvious may not address the actual bottleneck, and without before/after measurement you cannot know whether your change helped.
+Every optimization attempt must follow the same sequence. Skipping steps, especially the measurement steps, produces guesswork rather than engineering. A fix that seems obvious may not address the actual bottleneck and without before/after measurement you cannot know whether your change helped.
 
 ```mermaid
 flowchart LR
@@ -42,7 +40,6 @@ flowchart LR
 
 The loop is intentional. Fixing one bottleneck often reveals the next. A query that was dominated by segment fan-out may, after compaction, become dominated by a missing inverted index. Optimization is iterative, not a single intervention.
 
----
 
 ## The Diagnosis Toolkit
 
@@ -56,13 +53,12 @@ Before starting the problems, familiarize yourself with every diagnostic tool av
 | `BrokerResponse.numEntriesScannedInFilter` | Same location | Index entries evaluated during predicate processing — very high values relative to matching rows indicate ineffective index selection |
 | `BrokerResponse.numSegmentsQueried` | Same location | Segments contacted by the broker — high values indicate missing time predicate or segment fragmentation |
 | `BrokerResponse.numSegmentsMatched` | Same location | Segments that contained rows matching the predicate — the gap between this and `numSegmentsQueried` is the pruning savings |
-| `BrokerResponse.stageStats` | Present in multi-stage query responses only | Per-stage breakdown of execution time, rows processed, and data shuffled — identifies which stage is the bottleneck |
+| `BrokerResponse.stageStats` | Present in multi-stage query responses only | Per-stage breakdown of execution time, rows processed and data shuffled — identifies which stage is the bottleneck |
 | Controller UI Segments tab | **http://localhost:9000** → Tables → table name → Segments | Segment count, row counts per segment, time ranges — helps diagnose fragmentation and pruning gaps |
 | `FullScanDocIdSet` in EXPLAIN PLAN | Look for this operator type in plan output | Indicates no index was selected for this predicate — the server is reading every row |
 | `StarTreeDocIdSet` in EXPLAIN PLAN | Look for this operator type in plan output | Confirms the star-tree pre-aggregation path was selected |
 | `BloomFilterDocIdSet` in EXPLAIN PLAN | Look for this operator type in plan output | Confirms a bloom filter eliminated a segment without a full scan |
 
----
 
 ## Problem 1: Missing Time Predicate
 
@@ -133,7 +129,6 @@ After adding the predicate, the plan shows the time filter applied at the broker
 | `numSegmentsQueried` | | |
 | `numDocsScanned` | | |
 
----
 
 ## Problem 2: Full Table Scan on a High-Cardinality Column
 
@@ -198,7 +193,6 @@ If the approximate event time is known, tighten the window further. Every hour r
 | `numSegmentsQueried` | | |
 | `numDocsScanned` | | |
 
----
 
 ## Problem 3: The SELECT * Anti-Pattern
 
@@ -268,7 +262,6 @@ The plan nodes will be structurally similar — both use the inverted index on `
 | `numDocsScanned` | | |
 | Columns projected | All (count from schema) | 5 |
 
----
 
 ## Problem 4: Aggregation Without Star-Tree Index Coverage
 
@@ -308,7 +301,7 @@ Look at the DocIdSet operator in the plan. If it shows `FullScanDocIdSet` rather
 
 The star-tree applies when the query's GROUP BY dimensions form a prefix of the configured `dimensionsSplitOrder` and all requested aggregation functions are in `functionColumnPairs`. This query groups by `city` and `vertical` — a valid prefix of `["city", "vertical", "contract_tier"]`. The functions `COUNT(*)` and `SUM(monthly_orders)` are both in `functionColumnPairs`.
 
-If the plan shows `FullScanDocIdSet`, verify the table configuration using the Controller UI: navigate to **http://localhost:9000**, click Tables, select `merchants_dim_OFFLINE`, and open the Table Config tab. Confirm the `starTreeIndexConfigs` block is present and that `functionColumnPairs` includes `COUNT__*` and `SUM__monthly_orders`.
+If the plan shows `FullScanDocIdSet`, verify the table configuration using the Controller UI: navigate to **http://localhost:9000**, click Tables, select `merchants_dim_OFFLINE` and open the Table Config tab. Confirm the `starTreeIndexConfigs` block is present and that `functionColumnPairs` includes `COUNT__*` and `SUM__monthly_orders`.
 
 ### Step 4: Apply the Fix
 
@@ -341,7 +334,6 @@ This query matches the full star-tree configuration. The plan should show `StarT
 | `numDocsScanned` | | |
 | EXPLAIN PLAN operator | `FullScanDocIdSet` | `StarTreeDocIdSet` |
 
----
 
 ## Problem 5: Predicate Order and Index Pushdown
 
@@ -424,7 +416,6 @@ Second, it means that when you observe `numEntriesScannedInFilter` being high, t
 
 The values in the two columns should be nearly identical, confirming that predicate order does not affect execution.
 
----
 
 ## Problem 6: Excessive GROUP BY Cardinality in Multi-Stage Queries
 
@@ -468,7 +459,7 @@ The theoretical maximum number of rows shuffled in Stage 2 is the product of the
 cities × service_tiers × event_types × statuses × merchant_ids
 ```
 
-If `merchant_id` has 200 distinct values, `city` has 5, `service_tier` has 3, `event_type` has 4, and `status` has 4, the upper bound is 200 × 5 × 3 × 4 × 4 = 48,000 intermediate rows per Stage 1 worker. With multiple Stage 1 workers, this multiplies further before Stage 2 deduplication reduces it.
+If `merchant_id` has 200 distinct values, `city` has 5, `service_tier` has 3, `event_type` has 4 and `status` has 4, the upper bound is 200 × 5 × 3 × 4 × 4 = 48,000 intermediate rows per Stage 1 worker. With multiple Stage 1 workers, this multiplies further before Stage 2 deduplication reduces it.
 
 ### Step 3: Apply Fix A — Pre-Filter to Reduce Cardinality
 
@@ -494,7 +485,7 @@ Removing two constant-value dimensions from the GROUP BY and adding them as equa
 
 ### Step 4: Apply Fix B — Split Into Two Queries
 
-When the full five-dimension result is genuinely needed, consider whether the query must be answered in a single pass. One alternative is to compute the aggregation in two stages: a pre-aggregated summary table fed by a MergeRollupTask with `mergeType: rollup`, or a first query that produces city-level totals and a second that produces merchant-level totals, joined application-side.
+When the full five-dimension result is genuinely needed, consider whether the query must be answered in a single pass. One alternative is to compute the aggregation in two stages: a pre-aggregated summary table fed by a MergeRollupTask with `mergeType: rollup` or a first query that produces city-level totals and a second that produces merchant-level totals, joined application-side.
 
 ### Record Your Measurements
 
@@ -505,7 +496,6 @@ When the full five-dimension result is genuinely needed, consider whether the qu
 | Stage 2 time (from stageStats) | | |
 | Result row count | | |
 
----
 
 ## Problem 7: LIMIT Without ORDER BY in Multi-Stage Mode
 
@@ -563,7 +553,7 @@ ORDER BY total_fare DESC
 LIMIT 10
 ```
 
-This query is deterministic, benefits from the inverted index on `status`, benefits from time-based segment pruning, and produces the LIMIT pushdown at the correct stage.
+This query is deterministic, benefits from the inverted index on `status`, benefits from time-based segment pruning and produces the LIMIT pushdown at the correct stage.
 
 ### Record Your Measurements
 
@@ -573,7 +563,6 @@ This query is deterministic, benefits from the inverted index on `status`, benef
 | `numDocsScanned` | | |
 | LIMIT position in plan | Late stage | Pushed down |
 
----
 
 ## Problem 8: Suboptimal JOIN Order for Hash Join Execution
 
@@ -686,7 +675,6 @@ LIMIT 50
 | Stage 2 build time (stageStats) | | |
 | Stage 2 rows in hash table | | |
 
----
 
 ## Optimization Cheat Sheet
 
@@ -705,18 +693,16 @@ Use this reference when diagnosing an unfamiliar slow query. Start from the symp
 | High `numEntriesScannedInFilter` relative to `numDocsScanned` | Index exists but has poor selectivity for this predicate | Compare filter column cardinality to row count | Combine with a more selective predicate; or add range index for numeric columns |
 | `numSegmentsMatched` much lower than `numSegmentsQueried` | Pruning works but segment count is very high from fragmentation | Check segment count in Controller UI Segments tab | Run MergeRollupTask via Minion (see Lab 11) |
 
----
 
 ## Reflection Prompts
 
 1. Problems 1 and 6 both address query scope — one at the segment level through time predicates, the other at the shuffle level through GROUP BY cardinality. Describe how you would determine which of these two problems is the primary bottleneck for a given slow multi-stage query, using only the information available in the BrokerResponse and stageStats fields.
 
-2. Problem 4 demonstrated that the star-tree index only activates when the query's GROUP BY dimensions form a prefix of the configured `dimensionsSplitOrder` and all requested aggregation functions are in `functionColumnPairs`. An analyst team needs to run five different aggregation patterns against `merchants_dim`, each combining different subsets of the three dimensions. Design a single `starTreeIndexConfigs` block that satisfies all five patterns, and explain the trade-off between covering more patterns and the storage cost of the pre-materialized aggregates.
+2. Problem 4 demonstrated that the star-tree index only activates when the query's GROUP BY dimensions form a prefix of the configured `dimensionsSplitOrder` and all requested aggregation functions are in `functionColumnPairs`. An analyst team needs to run five different aggregation patterns against `merchants_dim`, each combining different subsets of the three dimensions. Design a single `starTreeIndexConfigs` block that satisfies all five patterns and explain the trade-off between covering more patterns and the storage cost of the pre-materialized aggregates.
 
-3. Problem 5 showed that Pinot's predicate pushdown evaluates indexed predicates by selectivity rather than textual order. However, there is one scenario where predicate order in SQL does affect correctness rather than performance: null handling in outer joins in the multi-stage engine. Describe how you would test whether a compound `WHERE` predicate against a left-joined table is being evaluated before or after the join, and why this matters for query correctness.
+3. Problem 5 showed that Pinot's predicate pushdown evaluates indexed predicates by selectivity rather than textual order. However, there is one scenario where predicate order in SQL does affect correctness rather than performance: null handling in outer joins in the multi-stage engine. Describe how you would test whether a compound `WHERE` predicate against a left-joined table is being evaluated before or after the join and why this matters for query correctness.
 
-4. Problems 7 and 8 both concern multi-stage engine behavior. A new engineer on your team argues that all queries should always be run in single-stage mode for simplicity, and that the multi-stage engine should only be enabled for queries that explicitly require a JOIN or window function. Evaluate this position. Under what circumstances is single-stage mode the correct default, and under what circumstances would restricting to single-stage mode impose unacceptable constraints on the analytics use case?
+4. Problems 7 and 8 both concern multi-stage engine behavior. A new engineer on your team argues that all queries should always be run in single-stage mode for simplicity and that the multi-stage engine should only be enabled for queries that explicitly require a JOIN or window function. Evaluate this position. Under what circumstances is single-stage mode the correct default and under what circumstances would restricting to single-stage mode impose unacceptable constraints on the analytics use case?
 
----
 
 [Previous: Lab 11 — Minion Tasks and Segment Compaction](lab-11-minion-tasks.md) | [Return to README](../README.md)

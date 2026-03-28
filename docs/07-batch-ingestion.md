@@ -26,7 +26,7 @@ Streams excel at capturing continuous flows. However, we recognize that not all 
 
 ### Chapter Roadmap
 
-This chapter covers when we choose batch over streaming, how we configure ingestion jobs, the internal mechanics of the segment creation pipeline, and how we manage operational concerns during bulk loads.
+This chapter covers when we choose batch over streaming, how we configure ingestion jobs, the internal mechanics of the segment creation pipeline and how we manage operational concerns during bulk loads.
 
 ## When to Use Batch Ingestion
 
@@ -44,7 +44,7 @@ We choose batch ingestion whenever data does not naturally originate from a cont
 
 ### The Core Logic
 
-We prioritize batch ingestion because it provides cleanliness (data is validated before it hits the cluster), consistency (updates are loaded atomically), and reproducibility (we can reload the exact same dataset for performance benchmarks).
+We prioritize batch ingestion because it provides cleanliness (data is validated before it hits the cluster), consistency (updates are loaded atomically) and reproducibility (we can reload the exact same dataset for performance benchmarks).
 
 ## The Ingestion JobSpec
 
@@ -103,11 +103,11 @@ recordReaderSpec:
 
 # Schema and Table Config References
 # URI pointing to the Pinot schema JSON file.
-# The schema defines column names, data types, and field types.
+# The schema defines column names, data types and field types.
 schemaURI: file:///workspace/schemas/merchants_dim.schema.json
 
 # URI pointing to the Pinot table config JSON file.
-# The table config defines indexes, encoding, routing, and tenants.
+# The table config defines indexes, encoding, routing and tenants.
 tableConfigURI: file:///workspace/tables/merchants_dim_offline.table.json
 
 # Table Specification
@@ -162,7 +162,7 @@ The record reader deserializes each record into Pinot's internal `GenericRow` re
 
 ### Stage 2 | Segment Building
 
-The segment builder takes the stream of `GenericRow` records and constructs a Pinot segment. Column encoding is the first sub-step: each column's values are analyzed to determine the dictionary (if applicable) and values are encoded according to the table config's encoding settings. Index construction follows, building all configured indexes (inverted, range, bloom, text, JSON, Star-Tree, etc.) during this phase. If the table config specifies a sorted column, the segment builder sorts all records by that column before encoding, enabling the sorted forward index optimization described in Chapter 6. Finally, metadata generation produces a record of the total document count, the min/max values for each column, the time range covered by the segment, and the CRC checksum.
+The segment builder takes the stream of `GenericRow` records and constructs a Pinot segment. Column encoding is the first sub-step: each column's values are analyzed to determine the dictionary (if applicable) and values are encoded according to the table config's encoding settings. Index construction follows, building all configured indexes (inverted, range, bloom, text, JSON, Star-Tree, etc.) during this phase. If the table config specifies a sorted column, the segment builder sorts all records by that column before encoding, enabling the sorted forward index optimization described in Chapter 6. Finally, metadata generation produces a record of the total document count, the min/max values for each column, the time range covered by the segment and the CRC checksum.
 
 The output of this stage is a self-contained segment directory that includes all column data files, index files, metadata and creation metadata.
 
@@ -224,7 +224,7 @@ A batch ingestion job pushes segments into an **OFFLINE** table. The offline tab
     "server": "DefaultServer"
   },
 
-  // Index configuration controls encoding, load mode, and all indexes.
+  // Index configuration controls encoding, load mode and all indexes.
   "tableIndexConfig": {
     // MMAP uses memory mapped files for reading segments.
     // HEAP loads segments entirely into JVM heap.

@@ -2,14 +2,13 @@
 
 ## Overview
 
-The hybrid table pattern is the defining architectural choice that separates production-grade Pinot deployments from proof-of-concept ones. At LinkedIn, Uber, and every large-scale Pinot installation, the same logical table name is served simultaneously by two physical storage layers: a REALTIME table that receives fresh events from Kafka into in-memory consuming segments, and an OFFLINE table that holds fully compacted, deeply indexed segments built from historical data. The Apache Pinot Broker mediates between them through a mechanism called the time boundary. This is a single timestamp that divides the query universe into "recent" and "historical" without any coordination required at query time.
+The hybrid table pattern is the defining architectural choice that separates production-grade Pinot deployments from proof-of-concept ones. At LinkedIn, Uber and every large-scale Pinot installation, the same logical table name is served simultaneously by two physical storage layers: a REALTIME table that receives fresh events from Kafka into in-memory consuming segments and an OFFLINE table that holds fully compacted, deeply indexed segments built from historical data. The Apache Pinot Broker mediates between them through a mechanism called the time boundary. This is a single timestamp that divides the query universe into "recent" and "historical" without any coordination required at query time.
 
-This lab makes the time boundary observable and measurable. You will create the offline counterpart to the `trip_events` table, load historical batch segments, call the Controller REST API to read the computed time boundary, and run queries that let you watch the Broker route work to each physical table separately.
+This lab makes the time boundary observable and measurable. You will create the offline counterpart to the `trip_events` table, load historical batch segments, call the Controller REST API to read the computed time boundary and run queries that let you watch the Broker route work to each physical table separately.
 
 > [!NOTE]
 > Lab 3 must be complete and the `trip_events_REALTIME` table must be active and consuming before you begin. Confirm that `SELECT COUNT(*) FROM trip_events` returns a non-zero result before proceeding.
 
----
 
 ## Learning Objectives
 
@@ -23,11 +22,10 @@ This lab makes the time boundary observable and measurable. You will create the 
 | Annotate an EXPLAIN PLAN for hybrid routing | You can identify which branch of the plan targets REALTIME segments and which targets OFFLINE segments |
 | Explain the RealtimeToOffline Minion task | You can describe what the task does and show where its configuration lives in the table config |
 
----
 
 ## The Time Boundary Concept
 
-The Broker does not scan event timestamps at query time to decide which physical table to consult. Instead, the Controller continuously computes the time boundary, which is the maximum `event_time_ms` value across all committed segments in the OFFLINE table, and stores it in ZooKeeper. When the Broker receives a query, it reads the time boundary from its local ZooKeeper view and uses it to split the query into two sub-queries.
+The Broker does not scan event timestamps at query time to decide which physical table to consult. Instead, the Controller continuously computes the time boundary, which is the maximum `event_time_ms` value across all committed segments in the OFFLINE table and stores it in ZooKeeper. When the Broker receives a query, it reads the time boundary from its local ZooKeeper view and uses it to split the query into two sub-queries.
 
 ```mermaid
 flowchart TD
@@ -71,7 +69,6 @@ The time boundary prevents double-counting. Because the REALTIME table is append
 | Data freshness | Up to hours old | Sub-second |
 | Covers time range | `event_time_ms <= time_boundary` | `event_time_ms > time_boundary` |
 
----
 
 ## The Hybrid Data Flow
 
@@ -117,9 +114,8 @@ flowchart LR
     style realtime fill:#dbeafe,stroke:#2563eb
 ```
 
-The two push paths, direct batch ingestion for the lab exercise and Minion-automated conversion for production, produce the same type of artifact: a committed OFFLINE segment. In production deployments the Minion path is preferred because it automates compaction, applies deduplication, and builds star-tree indexes that cannot exist in the REALTIME table's consuming phase.
+The two push paths, direct batch ingestion for the lab exercise and Minion-automated conversion for production, produce the same type of artifact: a committed OFFLINE segment. In production deployments the Minion path is preferred because it automates compaction, applies deduplication and builds star-tree indexes that cannot exist in the REALTIME table's consuming phase.
 
----
 
 ## Step 1: Verify the Realtime Table Is Active
 
@@ -163,7 +159,6 @@ Run this in the Query Console at **http://localhost:9000/#/query**. Record the v
 
 If `total_events` is zero, return to Lab 3 and re-run the data publishing steps before continuing.
 
----
 
 ## Step 2: Create the Offline Table Configuration
 
@@ -261,7 +256,6 @@ Expected response:
 
 Navigate to **http://localhost:9000/#/tables** and confirm that `trip_events_OFFLINE` now appears alongside `trip_events_REALTIME`. Both should be listed under the same logical group in the UI.
 
----
 
 ## Step 3: Load Historical Batch Segments
 
@@ -342,7 +336,6 @@ Expected output:
 ]
 ```
 
----
 
 ## Step 4: Read the Time Boundary from the Controller API
 
@@ -388,7 +381,6 @@ Record the time boundary value. Every query you run in the next steps that filte
 
 If the response body is empty or contains `"timeValue": null`, the OFFLINE table has no registered segments yet. Wait thirty seconds and retry.
 
----
 
 ## Step 5: Observe Segment Distribution Across Physical Tables
 
@@ -450,7 +442,6 @@ Record your observations in this measurement table.
 
 For Query A, `numRealtimeSegmentsQueried` should be zero. The Broker determined that no REALTIME segment could contain data matching the predicate and skipped those servers entirely. For Query B, `numOfflineSegmentsQueried` should be zero for the same reason. For Query C, both counters should show non-zero values.
 
----
 
 ## Step 6: Run EXPLAIN PLAN on a Time-Spanning Query
 
@@ -489,11 +480,10 @@ The REALTIME fragment adds an implicit predicate `event_time_ms > 1706832000000`
 
 The `BROKER_REDUCE` node at the top of the plan merges the two partial GROUP BY results by combining the COUNT values with addition and the SUM values with addition, then re-sorting and limiting the merged result.
 
----
 
 ## The RealtimeToOffline Minion Task
 
-In production, you do not push batch segments manually. The Pinot Minion runs a scheduled task called `RealtimeToOfflineSegmentsTask` that reads committed REALTIME segments, compacts them, builds the full offline index set (including star-tree), and pushes the resulting OFFLINE segments to the Controller. The REALTIME committed segments that have been successfully converted are then subject to the OFFLINE table's retention policy.
+In production, you do not push batch segments manually. The Pinot Minion runs a scheduled task called `RealtimeToOfflineSegmentsTask` that reads committed REALTIME segments, compacts them, builds the full offline index set (including star-tree) and pushes the resulting OFFLINE segments to the Controller. The REALTIME committed segments that have been successfully converted are then subject to the OFFLINE table's retention policy.
 
 Add the following `task` block to the OFFLINE table configuration to enable the Minion task.
 
@@ -569,7 +559,6 @@ curl -s "http://localhost:9000/tasks/task/Task_RealtimeToOfflineSegmentsTask_tri
 
 The `taskState` field will progress from `IN_PROGRESS` to `COMPLETED`. A completed task means new OFFLINE segments have been pushed and the time boundary will advance on the next Controller computation cycle.
 
----
 
 ## Key Concepts Reference
 
@@ -595,7 +584,6 @@ Compare the segment-to-server mappings in both responses. When Ideal State shows
 docker logs pinot-server --tail=100 | grep -i "trip_events_historical_0"
 ```
 
----
 
 ## Measurement Summary
 
@@ -613,11 +601,10 @@ Before completing this lab, fill in the following measurement table. These value
 | `timeUsedMs` for Query A | | Historical query — OFFLINE only |
 | `timeUsedMs` for Query C | | Hybrid query — both tables |
 
----
 
 ## Reflection Prompts
 
-1. The time boundary is computed as the maximum `event_time_ms` across all OFFLINE segments. If you push an OFFLINE segment that covers a time range of two hours but there is a four-hour gap between the end of that segment and the current time, what does the Broker do with queries that target the four-hour gap? Where do those events live, and does the Broker have a mechanism to detect and fill the gap?
+1. The time boundary is computed as the maximum `event_time_ms` across all OFFLINE segments. If you push an OFFLINE segment that covers a time range of two hours but there is a four-hour gap between the end of that segment and the current time, what does the Broker do with queries that target the four-hour gap? Where do those events live and does the Broker have a mechanism to detect and fill the gap?
 
 2. The OFFLINE table in this lab uses a star-tree index with `SUM__fare_amount` pre-materialized. The REALTIME table has no star-tree. Write a query that would benefit significantly from the star-tree when running against OFFLINE segments but must fall back to a full row scan when running against REALTIME segments. Explain why the REALTIME consuming segment cannot have a star-tree index.
 
@@ -625,6 +612,5 @@ Before completing this lab, fill in the following measurement table. These value
 
 4. In a multi-server Pinot cluster with three OFFLINE server instances and two REALTIME server instances, the Broker dispatches a hybrid query. If one OFFLINE server becomes unavailable mid-query, the response will contain data from only some OFFLINE segments. Describe how the BrokerResponse communicates this partial failure and how you would detect it programmatically from the API response JSON.
 
----
 
 [Previous: Lab 8 — SLO and Incident Drill](lab-08-slo-incident.md) | [Next: Lab 10 — Schema Evolution Without Downtime](lab-10-schema-evolution.md)

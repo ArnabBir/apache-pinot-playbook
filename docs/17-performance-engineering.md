@@ -9,7 +9,6 @@ This chapter treats performance engineering as a structured discipline with a cl
 > [!IMPORTANT]
 > The most dangerous performance mistake is optimizing the wrong thing. Teams that add indexes before understanding their query patterns, tune segment sizes without measuring pruning effectiveness or celebrate single-query benchmarks without testing concurrency will find themselves fighting symptoms instead of causes.
 
----
 
 ## The Performance Engineering Methodology
 
@@ -107,9 +106,9 @@ For each hot query, verify that the necessary indexes exist:
 
 High-cardinality GROUP BY operations are one of the most common sources of Pinot performance problems. When a query groups by a column with millions of distinct values, each server must maintain a hash map with millions of entries.
 
-Warning signs of cardinality problems include GROUP BY on a user ID or transaction ID column (these columns typically have cardinality in the millions), multiple GROUP BY columns whose combined cardinality is explosive (grouping by `city, merchant_id, hour` might produce 10,000 groups while grouping by `city, merchant_id, minute, product_id` might produce 10 million groups), and missing LIMIT on GROUP BY queries (without a LIMIT, the broker must merge all groups).
+Warning signs of cardinality problems include GROUP BY on a user ID or transaction ID column (these columns typically have cardinality in the millions), multiple GROUP BY columns whose combined cardinality is explosive (grouping by `city, merchant_id, hour` might produce 10,000 groups while grouping by `city, merchant_id, minute, product_id` might produce 10 million groups) and missing LIMIT on GROUP BY queries (without a LIMIT, the broker must merge all groups).
 
-Strategies for managing cardinality include adding precomputed helper columns (instead of computing `DATE_TRUNC('HOUR', event_time)` at query time, add an `event_hour` column during ingestion), using HAVING to filter small groups (adding `HAVING COUNT(*) > 10` eliminates noise groups), considering star-tree indexes for queries that repeatedly compute the same aggregation pattern, and evaluating whether denormalization can reduce joins by embedding a name directly into the fact table.
+Strategies for managing cardinality include adding precomputed helper columns (instead of computing `DATE_TRUNC('HOUR', event_time)` at query time, add an `event_hour` column during ingestion), using HAVING to filter small groups (adding `HAVING COUNT(*) > 10` eliminates noise groups), considering star-tree indexes for queries that repeatedly compute the same aggregation pattern and evaluating whether denormalization can reduce joins by embedding a name directly into the fact table.
 
 ### Step 5: Measure Under Realistic Concurrency
 
@@ -236,7 +235,6 @@ JAVA_OPTS="-Xms16g -Xmx16g -XX:MaxDirectMemorySize=8g \
 
 G1GC is the recommended garbage collector. The key tuning parameter is `MaxGCPauseMillis`. Setting this to 200ms provides a reasonable balance between throughput and pause latency.
 
----
 
 ## Star-Tree Index: The Pre-Aggregation Accelerator
 
@@ -244,7 +242,7 @@ The star-tree index deserves special attention because it represents a fundament
 
 ### When Star-Tree Helps
 
-Star-tree indexes are most effective when a small set of aggregation queries accounts for a large share of the workload, the queries group by the same dimensions and aggregate the same metrics, and the raw data volume is large enough that scanning it for every query is expensive.
+Star-tree indexes are most effective when a small set of aggregation queries accounts for a large share of the workload, the queries group by the same dimensions and aggregate the same metrics and the raw data volume is large enough that scanning it for every query is expensive.
 
 ### How Star-Tree Works
 
@@ -287,7 +285,6 @@ During segment creation, Pinot builds a tree structure where each node represent
 
 Only pre-configured aggregation patterns benefit from star-tree acceleration. A query that groups by a dimension not in the star-tree will fall back to raw data scanning. Adding new dimensions requires rebuilding segments: if the hot query pattern changes, segments must be reloaded. Star-tree does not help with selection queries that retrieve individual rows.
 
----
 
 ## Benchmarking Methodology
 
@@ -295,7 +292,7 @@ Effective benchmarking requires discipline. A benchmark that does not simulate r
 
 ### Benchmarking Checklist
 
-Before running a benchmark, confirm that the benchmark data matches production data in volume and distribution, that the queries used are the actual hot queries rather than synthetic ones, that the benchmark queries have been run once to warm the page cache before measuring, that queries run at the expected concurrency level, that the benchmark runs long enough to observe steady-state behavior, and that the environment is controlled without production traffic present.
+Before running a benchmark, confirm that the benchmark data matches production data in volume and distribution, that the queries used are the actual hot queries rather than synthetic ones, that the benchmark queries have been run once to warm the page cache before measuring, that queries run at the expected concurrency level, that the benchmark runs long enough to observe steady-state behavior and that the environment is controlled without production traffic present.
 
 ### What to Measure
 
@@ -320,7 +317,6 @@ Every optimization should be evaluated with a before-and-after benchmark compari
 
 This discipline prevents "optimization theater" where changes are declared successful without evidence.
 
----
 
 ## Performance Anti-Patterns
 
@@ -346,7 +342,6 @@ Teams often focus on server-side execution time and ignore the broker-side merge
 
 Connecting a BI tool directly to the Pinot broker and allowing arbitrary queries is a recipe for problems. Place an analytics API between the BI tool and Pinot so the API can enforce query constraints.
 
----
 
 ## Performance Monitoring in Production
 
@@ -364,19 +359,16 @@ Performance engineering does not end after deployment. Production performance mo
 
 Track broker query latency (p50, p90, p99) over time with dashboards. Monitor broker query rate because sudden spikes may indicate a misconfigured dashboard. Watch server segments scanned per query because an increase may indicate that pruning has stopped working. Monitor server CPU utilization since sustained high CPU leaves no headroom for query spikes. Track segment count per table because a rapidly growing count may indicate that flush thresholds are too aggressive. Monitor GC pause duration and frequency because long pauses cause direct latency spikes.
 
----
 
 ## Operating Heuristics
 
 Tune for the top queries that matter to the business, not for synthetic vanity benchmarks. A cluster optimized for a query nobody runs is optimized for nothing. Always compare optimization ideas against measured before-and-after evidence, because intuition about performance is frequently wrong. Use quotas and workload isolation as performance tools, not only as governance tools. Invest in star-tree indexes for stable, high-frequency aggregation patterns where the latency improvement is often 10x to 100x. Monitor performance continuously in production because performance characteristics change as data volumes grow. Keep benchmark scripts in the repository rather than in someone's scratch notebook. Benchmarks are infrastructure.
 
----
 
 ## Common Pitfalls
 
 Benchmarking only single-query latency on a quiet cluster measures best-case performance, not production reality. Adding indexes without verifying they help the hot path creates pure overhead. Ignoring the difference between correctness success and performance success. A query that returns correct results in 30 seconds is functionally correct but operationally useless if the SLA requires sub-second latency. Tuning JVM parameters before understanding the workload leads into a deep rabbit hole of diminishing returns. Treating performance as a one-time project rather than an ongoing discipline means regressions go undetected until they become incidents. Copying configuration from blog posts without understanding the context is dangerous. A configuration that works for a 10-node cluster may not work for a 3-node cluster.
 
----
 
 ## Practice Prompts
 
@@ -387,16 +379,14 @@ Benchmarking only single-query latency on a quiet cluster measures best-case per
 5. A team discovers that their p99 query latency doubled after a table configuration change. Describe the diagnostic process.
 6. Compare the performance impact of adding an inverted index versus adding a star-tree index for a query that filters on `city` and aggregates `SUM(fare_amount)`.
 
----
 
 ## Suggested Labs and Follow-Through
 
-- **[Lab 4: Index Tuning and Pruning](../labs/lab-04-index-tuning.md)** provides hands-on exercises for measuring performance impact.
+- **[Lab 4: Index Tuning and Pruning](../labs/lab-04-index-tuning.md)** provides hands on exercises for measuring performance impact.
 - **Benchmark exercise:** Write a concurrent benchmark script that runs the hot queries at 20 concurrent connections for 5 minutes. Record p50, p90 and p99 latencies.
 - **Cardinality analysis exercise:** For each GROUP BY query, calculate the theoretical cardinality. Identify any queries where the cardinality exceeds 100,000.
 - **Resource contention exercise:** Run two concurrent benchmark workloads against the same table and measure how the slow query affects the hot queries.
 
----
 
 ## Repository Artifacts
 
@@ -408,7 +398,6 @@ The following files in this repository support performance engineering workflows
 - `sql/` contains SQL examples organized by complexity and use case.
 - `tables/` contains annotated table configurations demonstrating performance-relevant settings.
 
----
 
 ## Further Reading and Resources
 

@@ -2,16 +2,15 @@
 
 ## Overview
 
-Two of Apache Pinot's most powerful index types exist specifically for columns that store unstructured or semi-structured data. The JSON index accelerates predicate evaluation and path extraction on JSON columns, converting what would otherwise be a row-by-row deserialization pass into a fast inverted index lookup. The Text index and FST index serve the complementary case: free-form string columns where queries involve phrase matching, boolean operators, wildcards, and regular expressions rather than exact equality.
+Two of Apache Pinot's most powerful index types exist specifically for columns that store unstructured or semi-structured data. The JSON index accelerates predicate evaluation and path extraction on JSON columns, converting what would otherwise be a row-by-row deserialization pass into a fast inverted index lookup. The Text index and FST index serve the complementary case: free-form string columns where queries involve phrase matching, boolean operators, wildcards and regular expressions rather than exact equality.
 
 Without either index type, operating on these columns forces the query engine to decode every row's raw bytes to evaluate a predicate. At millions of rows this produces query latencies that are incompatible with interactive dashboards. With the correct index in place, the same queries resolve in milliseconds because the rows to be returned are identified before the raw column values are read.
 
-This lab builds practical fluency with both index types against the `trip_events` table. You will measure the before-and-after query performance for JSON predicate filtering, implement phrase and wildcard text search against a driver notes column, and configure the FST index for optimized regular expression matching against a merchant name column.
+This lab builds practical fluency with both index types against the `trip_events` table. You will measure the before-and-after query performance for JSON predicate filtering, implement phrase and wildcard text search against a driver notes column and configure the FST index for optimized regular expression matching against a merchant name column.
 
 > [!NOTE]
 > Labs 1 through 3 must be complete and data must be present in `trip_events` and `merchants_dim` before this lab.
 
----
 
 ## Learning Objectives
 
@@ -21,11 +20,10 @@ This lab builds practical fluency with both index types against the `trip_events
 | Query JSON fields using `jsonExtractScalar` | Extraction queries return typed values without errors |
 | Measure the speedup from JSON index vs forced scan | You have recorded `numDocsScanned` and `timeUsedMs` for both paths in the measurement table |
 | Use `json_match` for fast JSON predicate evaluation | Compound JSON predicates return correct results |
-| Add a TEXT index column and query it with `text_match` | Phrase, boolean, wildcard, and NOT queries return expected rows |
+| Add a TEXT index column and query it with `text_match` | Phrase, boolean, wildcard and NOT queries return expected rows |
 | Configure and verify the FST index for `regexp_like` | FST-accelerated regexp queries show reduced `numDocsScanned` in the measurement table |
 | Distinguish the three advanced index types | Given a query type, you can identify the correct index and explain why |
 
----
 
 ## The `attributes` Column
 
@@ -54,9 +52,8 @@ The `trip_events` table carries an `attributes` column of type JSON. This column
 }
 ```
 
-The nesting depth reaches two levels in most fields. The `payment.gateway`, `route.distance_km`, and `device.os` paths are among the most queried because they appear in operational dashboards and fraud detection pipelines.
+The nesting depth reaches two levels in most fields. The `payment.gateway`, `route.distance_km` and `device.os` paths are among the most queried because they appear in operational dashboards and fraud detection pipelines.
 
----
 
 ## JSON Index Architecture
 
@@ -93,7 +90,6 @@ flowchart TB
 
 The JSON index trades segment build time and additional storage for dramatically reduced query scan cost. Every distinct path-value combination found in any row becomes an entry in a flat inverted index. A `json_match` predicate is translated into one or more lookups against this flat index, returning the row ID set before any raw JSON deserialization occurs.
 
----
 
 ## Step 1: Verify the JSON Index Configuration
 
@@ -148,7 +144,6 @@ Expected output:
 }
 ```
 
----
 
 ## Step 2: Query JSON Fields Using `jsonExtractScalar`
 
@@ -188,9 +183,8 @@ GROUP BY method
 ORDER BY trips DESC
 ```
 
-Expected result: A row per distinct payment method value found in the `attributes` column, ordered by trip count descending.
+Expected result: A row per distinct payment method value found in the `attributes` column ordered by trip count descending.
 
----
 
 ## Step 3: Fast JSON Predicate Filtering with `json_match`
 
@@ -248,7 +242,6 @@ Record your observed values from the two approaches above.
 
 A well-functioning JSON index will show `numDocsScanned` for the `json_match` queries at or near the actual number of matching rows, rather than the total table size. The `timeUsedMs` reduction is typically one to two orders of magnitude for large datasets.
 
----
 
 ## Step 4: Extract Keys Using `jsonExtractKey`
 
@@ -266,17 +259,15 @@ Expected result: Each row shows the list of top-level keys present in its `attri
 
 This function is particularly useful during schema exploration — when onboarding a new JSON column, `jsonExtractKey` lets you discover what paths are present in the actual data before writing extraction queries.
 
----
 
 ## Full-Text Index
 
 ### The Text Index Model
 
-A Text index (also called an inverted term index) tokenizes a string column's values into individual terms at segment build time. Each term maps to the set of row IDs whose column value contains that term. A subsequent `text_match` query is evaluated by looking up one or more terms in this posting structure, combining the resulting row ID sets according to the boolean logic of the query, and returning the intersection without touching the raw column values.
+A Text index (also called an inverted term index) tokenizes a string column's values into individual terms at segment build time. Each term maps to the set of row IDs whose column value contains that term. A subsequent `text_match` query is evaluated by looking up one or more terms in this posting structure, combining the resulting row ID sets according to the boolean logic of the query and returning the intersection without touching the raw column values.
 
 The FST index (Finite State Transducer index) is a companion structure built over the same column to accelerate regular expression matching. Where the Text index accelerates term-based queries, the FST index accelerates regexp patterns that can be evaluated against the sorted term dictionary without a full dictionary scan.
 
----
 
 ## Step 5: Add a `driver_notes` TEXT Column
 
@@ -321,11 +312,10 @@ docker exec -i kafka kafka-console-producer.sh \
 
 Expected output: Silent exit after streaming all five records.
 
----
 
 ## Step 6: Text Search Using `text_match`
 
-All `text_match` queries follow the syntax `text_match(column_name, 'query_expression')`. The query expression language supports phrases (in double quotes), boolean operators (`AND`, `OR`, `NOT`), and wildcards (`*`).
+All `text_match` queries follow the syntax `text_match(column_name, 'query_expression')`. The query expression language supports phrases (in double quotes), boolean operators (`AND`, `OR`, `NOT`) and wildcards (`*`).
 
 ### Phrase Search
 
@@ -405,11 +395,10 @@ Expected result:
 
 `trip_000010` contains both `airport` and `construction` and is therefore excluded. Only `trip_000011` contains `airport` without `construction`.
 
----
 
 ## Step 7: FST Index for `regexp_like` Optimization
 
-The FST (Finite State Transducer) index is built over the sorted term dictionary of a string column. It encodes the dictionary as a compact automaton that allows regular expression patterns to be evaluated against terms without iterating every term in the dictionary. This accelerates prefix patterns (`Cafe.*`), suffix patterns (`.*Cafe`), and anchored patterns significantly.
+The FST (Finite State Transducer) index is built over the sorted term dictionary of a string column. It encodes the dictionary as a compact automaton that allows regular expression patterns to be evaluated against terms without iterating every term in the dictionary. This accelerates prefix patterns (`Cafe.*`), suffix patterns (`.*Cafe`) and anchored patterns significantly.
 
 ### Configure the FST Index on `merchant_name`
 
@@ -497,7 +486,6 @@ The FST index accelerates regexp patterns that can be evaluated against the term
 
 For patterns that fall outside the FST's acceleration range, Pinot falls back transparently to a dictionary scan. No error is raised — the FST index provides a best-effort acceleration, not a correctness guarantee.
 
----
 
 ## Index Comparison Table
 
@@ -509,11 +497,10 @@ For patterns that fall outside the FST's acceleration range, Pinot falls back tr
 | Inverted index | Any | Equality and IN predicates | Exact value matching, low-to-medium cardinality columns | Not effective for range predicates or LIKE patterns |
 | Range index | Numeric, timestamp | Range predicates, ORDER BY, BETWEEN | Numeric and time range filtering; segment pruning via min/max metadata | Not effective for equality-only queries; higher storage than inverted index for low-cardinality columns |
 
----
 
 ## `SET skipIndexes` Reference Table
 
-The `SET skipIndexes` hint accepts a comma-separated list of `column=indextype` pairs. Use it to measure baseline performance before an index is applied, or to investigate whether an index is producing correct results.
+The `SET skipIndexes` hint accepts a comma-separated list of `column=indextype` pairs. Use it to measure baseline performance before an index is applied or to investigate whether an index is producing correct results.
 
 | Index Type Identifier | Index Being Bypassed | Example Hint |
 |-----------------------|---------------------|--------------|
@@ -526,18 +513,16 @@ The `SET skipIndexes` hint accepts a comma-separated list of `column=indextype` 
 
 Multiple hints can be combined in a single statement. Separate them with a comma inside the string value: `SET skipIndexes='attributes=json,city=inverted'`. The hint applies only to the query in the current statement. It does not modify any index configuration and has no effect on subsequently executed queries.
 
----
 
 ## Reflection Prompts
 
 1. A `json_match` query for `"$.route.distance_km" > '20'` returns correct results, but a colleague observes that the numeric comparison is expressed as a string. Explain how the JSON index stores numeric values and how Pinot performs the comparison internally. What would happen if the stored value had been ingested as the string `"28.5"` rather than the number `28.5`?
 
-2. You run the same `text_match` query immediately after ingestion and notice that newly ingested rows are not appearing in the results. A row ingested 30 seconds ago with the note "airport no show" does not match `text_match(driver_notes, '"no show"')`. Explain the lifecycle of the Text index relative to segment sealing, and describe the ingestion state in which `text_match` cannot yet use the index for recently arrived rows.
+2. You run the same `text_match` query immediately after ingestion and notice that newly ingested rows are not appearing in the results. A row ingested 30 seconds ago with the note "airport no show" does not match `text_match(driver_notes, '"no show"')`. Explain the lifecycle of the Text index relative to segment sealing and describe the ingestion state in which `text_match` cannot yet use the index for recently arrived rows.
 
 3. The FST index measurement table shows that `numDocsScanned` for the FST-accelerated query equals the total number of matching rows, but the reduction in `timeUsedMs` compared to the full scan is smaller than expected. Propose two explanations for why the time reduction might be modest even when `numDocsScanned` shows clear improvement.
 
-4. Your team needs to support the following query pattern against a `customer_feedback` JSON column: `WHERE json_match(customer_feedback, '"$.sentiment" = ''negative'' AND "$.category" = ''driver_behavior''')`. Six months after launch, you discover that the JSON index size for `customer_feedback` has grown to 40 GB per server, consuming more disk than the raw column data. Explain why this occurred in terms of the JSON index build process, and describe two strategies for reducing the index size without removing it entirely.
+4. Your team needs to support the following query pattern against a `customer_feedback` JSON column: `WHERE json_match(customer_feedback, '"$.sentiment" = ''negative'' AND "$.category" = ''driver_behavior''')`. Six months after launch, you discover that the JSON index size for `customer_feedback` has grown to 40 GB per server, consuming more disk than the raw column data. Explain why this occurred in terms of the JSON index build process and describe two strategies for reducing the index size without removing it entirely.
 
----
 
 [Previous: Lab 18 — Multi-Value Column Analytics](lab-18-multi-value-columns.md) | [Next: Lab 1 — Local Cluster Setup](lab-01-local-cluster.md)

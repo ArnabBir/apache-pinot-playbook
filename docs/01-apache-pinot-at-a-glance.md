@@ -94,7 +94,7 @@ Relational databases are exceptional at transactional workloads, but analytical 
 Warehouses are optimized for throughput, not latency. A 3 second response is fast for a warehouse but a failure for a user facing API requiring sub-100ms response times. Most warehouse architectures operate on micro batches measured in minutes rather than true real time ingestion measured in seconds. At scale, 10,000 queries per second becomes both technically challenging and financially painful.
 
 #### Search Engines
-Designed for information retrieval, not deep analytics. Inverted indexes do not naturally extend to the columnar scans that analytical queries demand, and complex calculations with SQL standard semantics are difficult to express accurately.
+Designed for information retrieval, not deep analytics. Inverted indexes do not naturally extend to the columnar scans that analytical queries demand and complex calculations with SQL standard semantics are difficult to express accurately.
 
 > [!NOTE]
 > ### The Gap Pinot Fills
@@ -183,7 +183,7 @@ Data enters Pinot from two primary sources, catering to both real time and histo
 
 ### Control Plane
 
-The **brain** of the cluster manages metadata and orchestration across three components. The Pinot Controller manages cluster metadata, orchestrates segment assignment, coordinates rebalance operations and manages the lifecycle of minion tasks. ZooKeeper serves as the source of truth, storing the cluster state including table configurations, schema definitions, segment assignments and routing tables. Minions are optional worker processes that execute essential background tasks such as segment merging, purging and data conversion.
+The **brain** of the cluster manages metadata and orchestration across three components. The Pinot Controller manages cluster metadata orchestrates segment assignment, coordinates rebalance operations and manages the lifecycle of minion tasks. ZooKeeper serves as the source of truth, storing the cluster state including table configurations, schema definitions, segment assignments and routing tables. Minions are optional worker processes that execute essential background tasks such as segment merging, purging and data conversion.
 
 ### Query Plane
 

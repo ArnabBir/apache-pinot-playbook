@@ -107,7 +107,7 @@ Using Pinot as the only data store for multi-year historical analysis, regulator
 
 ### Anti-Pattern 5: Tuning Based on Anecdote
 
-Making Pinot configuration changes based on "someone said this worked for them" rather than measured evidence from your own workload is dangerous. Pinot's performance characteristics depend heavily on the specific data distribution, query patterns and cluster topology. A configuration that works for a 10-node cluster processing ad-click events may be counterproductive for a 3-node cluster processing financial transactions. The correct approach is to follow the performance engineering methodology described in Chapter 17: measure before and after every change, and document the evidence.
+Making Pinot configuration changes based on "someone said this worked for them" rather than measured evidence from your own workload is dangerous. Pinot's performance characteristics depend heavily on the specific data distribution, query patterns and cluster topology. A configuration that works for a 10-node cluster processing ad-click events may be counterproductive for a 3-node cluster processing financial transactions. The correct approach is to follow the performance engineering methodology described in Chapter 17: measure before and after every change and document the evidence.
 
 
 ## The Decision Checklist

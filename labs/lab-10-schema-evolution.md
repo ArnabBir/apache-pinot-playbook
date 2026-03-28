@@ -2,30 +2,28 @@
 
 ## Overview
 
-A Pinot schema is not a static contract. Production systems evolve: new attributes appear on events, numerical precision requirements change, business logic introduces new metrics, and occasionally a field that was once essential becomes obsolete. The challenge is applying these changes safely — without taking the table offline, without corrupting existing segments, and without introducing query-time anomalies that are difficult to diagnose.
+A Pinot schema is not a static contract. Production systems evolve: new attributes appear on events, numerical precision requirements change, business logic introduces new metrics and occasionally a field that was once essential becomes obsolete. The challenge is applying these changes safely — without taking the table offline, without corrupting existing segments and without introducing query-time anomalies that are difficult to diagnose.
 
-Pinot's approach to schema evolution is deliberately conservative. The Controller validates every schema change against the current state of the table before applying it. Some changes are safe by construction and can be applied immediately. Others require careful orchestration: the schema must be updated first, existing segments must be reloaded so that all servers serve the new column definition, and new events must arrive before the column is populated. A third class of changes is rejected outright because no in-place migration path exists — the only resolution is a full re-ingestion.
+Pinot's approach to schema evolution is deliberately conservative. The Controller validates every schema change against the current state of the table before applying it. Some changes are safe by construction and can be applied immediately. Others require careful orchestration: the schema must be updated first, existing segments must be reloaded so that all servers serve the new column definition and new events must arrive before the column is populated. A third class of changes is rejected outright because no in-place migration path exists — the only resolution is a full re-ingestion.
 
-This lab builds the judgment to distinguish these three categories and gives you hands-on practice with each. You will add a backward-compatible column, observe its null behavior in existing segments, trigger a segment reload, and then deliberately attempt a breaking change to understand what the Controller rejects and why.
+This lab builds the judgment to distinguish these three categories and gives you hands on practice with each. You will add a backward-compatible column, observe its null behavior in existing segments, trigger a segment reload and then deliberately attempt a breaking change to understand what the Controller rejects and why.
 
 > [!NOTE]
 > Lab 3 must be complete and data must be present in `trip_events` before starting. The schema evolution steps in this lab modify the live `trip_events` schema. Work through every step in sequence — each step depends on the state left by the previous one.
 
----
 
 ## Learning Objectives
 
 | Objective | Success Criterion |
 |-----------|-------------------|
-| Classify schema changes by safety | Given a change description, you can assign it to Safe, Conditional, or Breaking without reference |
-| Add a new dimension column with a default value | The `payment_gateway` column appears in schema, returns the default for old rows, and returns real values for new rows |
+| Classify schema changes by safety | Given a change description, you can assign it to Safe, Conditional or Breaking without reference |
+| Add a new dimension column with a default value | The `payment_gateway` column appears in schema, returns the default for old rows and returns real values for new rows |
 | Reload segments to propagate a schema change | `POST /segments/trip_events/reload` completes successfully and the column becomes queryable |
 | Observe null behavior in pre-change segments | A SELECT query shows null for `payment_gateway` in rows ingested before the change |
 | Trigger a Controller rejection for a breaking change | Attempting to change `fare_amount` from DOUBLE to STRING returns a 4xx error from the Controller |
 | Add an indexed metric column | `tip_amount` appears in the schema with an associated range index and the tableIndexConfig reflects the change |
 | Describe the end-to-end propagation path | You can trace a schema change from Controller REST API through ZooKeeper to segment reload to query visibility |
 
----
 
 ## The Schema Evolution Safety Matrix
 
@@ -86,7 +84,6 @@ flowchart TD
     style rename_breaking fill:#fee2e2,stroke:#dc2626
 ```
 
----
 
 ## Change Classification Reference
 
@@ -104,7 +101,6 @@ flowchart TD
 | Remove column with active inverted or range index | Breaking | Not supported without index rebuild. Active queries against the column will fail after removal. |
 | Rename a column | Breaking | No rename API exists. Treat as remove old column and add new column. Requires application-level migration. |
 
----
 
 ## Step 1: Inspect the Current Schema
 
@@ -172,7 +168,6 @@ print(f'Total columns:     {dims + metrics + datetimes}')
 
 Fill in the "Before" column now. You will fill in "After" at the end.
 
----
 
 ## Step 2: Add a New Dimension Column with a Default Value
 
@@ -251,7 +246,6 @@ Found payment_gateway: {
 }
 ```
 
----
 
 ## Step 3: Verify Null Behavior in Existing Segments
 
@@ -275,15 +269,14 @@ Expected output:
 
 ```
 trip_id      | city      | payment_method | payment_gateway
--------------|-----------|----------------|----------------
-trip_000001  | mumbai    | card           | unknown
+-------------|-----------|----------------|-------------trip_000001  | mumbai    | card           | unknown
 trip_000002  | delhi     | cash           | unknown
 trip_000003  | bangalore | wallet         | unknown
 trip_000004  | mumbai    | card           | unknown
 trip_000005  | delhi     | cash           | unknown
 ```
 
-Every row returns `"unknown"` for `payment_gateway` — the `defaultNullValue` from the schema. This is the correct behavior. The column is queryable immediately after the schema update, and the default value prevents `null` from surfacing in dashboards or downstream consumers that were not expecting a nullable column.
+Every row returns `"unknown"` for `payment_gateway` — the `defaultNullValue` from the schema. This is the correct behavior. The column is queryable immediately after the schema update and the default value prevents `null` from surfacing in dashboards or downstream consumers that were not expecting a nullable column.
 
 Now verify that the column can be used in a filter predicate.
 
@@ -295,7 +288,6 @@ WHERE payment_gateway != 'unknown'
 
 Expected result: `0`. All existing rows carry the default value. After new events with a populated `payment_gateway` field arrive, this count will grow.
 
----
 
 ## Step 4: Reload Segments to Propagate the Schema Change
 
@@ -337,7 +329,6 @@ WHERE trip_id IN ('trip_000001', 'trip_000002', 'trip_000003')
 
 The results should still return `"unknown"` because no new events with `payment_gateway` populated have arrived yet. The reload does not manufacture data — it simply encodes the schema structure into each segment so that subsequent index operations will work correctly.
 
----
 
 ## Step 5: Publish New Events with the New Field Populated
 
@@ -382,13 +373,12 @@ Expected output:
 
 ```
 trip_id       | city      | payment_method | payment_gateway | fare_amount
---------------|-----------|----------------|-----------------|------------
-trip_new_001  | mumbai    | card           | stripe          | 245.5
+--------------|-----------|----------------|-----------------|---------trip_new_001  | mumbai    | card           | stripe          | 245.5
 trip_new_002  | delhi     | wallet         | razorpay        | 380.0
 trip_new_003  | bangalore | card           | stripe          | 195.75
 ```
 
-The new events carry real `payment_gateway` values. The schema evolution is complete for this column: old rows return `"unknown"`, new rows return their actual gateway name, and no downtime occurred.
+The new events carry real `payment_gateway` values. The schema evolution is complete for this column: old rows return `"unknown"`, new rows return their actual gateway name and no downtime occurred.
 
 Now verify that both old and new rows are visible in the same query.
 
@@ -406,15 +396,13 @@ Expected output:
 
 ```
 payment_gateway | trips | total_fare
-----------------|-------|------------
-unknown         | 1611  | 385234.50
+----------------|-------|---------unknown         | 1611  | 385234.50
 stripe          | 2     | 441.25
 razorpay        | 1     | 380.00
 ```
 
 The `unknown` group contains all pre-change rows. The `stripe` and `razorpay` groups contain the three newly published events.
 
----
 
 ## Step 6: Attempt a Breaking Change
 
@@ -454,7 +442,7 @@ Expected response — the Controller rejects the change with a 4xx status and a 
 ```json
 {
   "code": 400,
-  "error": "Invalid schema change: Changing dataType for column 'fare_amount' from 'DOUBLE' to 'STRING' is not backward compatible. Existing segments encode this column as DOUBLE and cannot be reinterpreted as STRING without full re-ingestion. Remove the column from all existing segments before changing its type, or create a new column with the desired type."
+  "error": "Invalid schema change: Changing dataType for column 'fare_amount' from 'DOUBLE' to 'STRING' is not backward compatible. Existing segments encode this column as DOUBLE and cannot be reinterpreted as STRING without full re-ingestion. Remove the column from all existing segments before changing its type or create a new column with the desired type."
 }
 ```
 
@@ -479,7 +467,6 @@ fare_amount type is still: DOUBLE
 
 The production-safe alternative to changing the type of an existing column is to add a new column with the new type. If the product requirement is to display a formatted currency string, that transformation belongs in the application layer, not in the Pinot schema.
 
----
 
 ## Step 7: Add a New Metric Column with an Index
 
@@ -525,7 +512,7 @@ Expected response:
 }
 ```
 
-Now update the REALTIME table configuration to add the range index for `tip_amount`. Fetch the current table config, add `tip_amount` to `rangeIndexColumns`, and upload.
+Now update the REALTIME table configuration to add the range index for `tip_amount`. Fetch the current table config, add `tip_amount` to `rangeIndexColumns` and upload.
 
 ```bash
 curl -s http://localhost:9000/tables/trip_events_REALTIME | python3 -m json.tool > /tmp/trip_events_rt_v2.json
@@ -617,8 +604,7 @@ Expected output:
 
 ```
 total_trips | total_tips | avg_tip
-------------|------------|--------
-1614        | 0.0        | 0.0
+------------|------------|-----1614        | 0.0        | 0.0
 ```
 
 The total includes the three new events you published in Step 5. All rows return `0.0` for `tip_amount` because the field was not present when they were written.
@@ -632,7 +618,6 @@ SELECT COUNT(*) FROM trip_events WHERE tip_amount > 50.0
 
 Look for `RangeIndexBasedDocIdSet` or a reference to `RangeFilter` on `tip_amount` in the plan output. Its presence confirms that the reload successfully built the range index and the query engine will use it for future range predicates on `tip_amount`.
 
----
 
 ## The Schema Change Propagation Path
 
@@ -676,9 +661,8 @@ sequenceDiagram
     Note over Operator: New column now queryable\nin all segments\nwith consistent encoding
 ```
 
-The most important property of this sequence is that the table remains queryable throughout. Between the schema upload and the segment reload completion, queries will succeed — old segments return default values for the new column, and new consuming segments return real values. There is no window where queries fail.
+The most important property of this sequence is that the table remains queryable throughout. Between the schema upload and the segment reload completion, queries will succeed — old segments return default values for the new column and new consuming segments return real values. There is no window where queries fail.
 
----
 
 ## The Schema Review Checklist
 
@@ -695,7 +679,6 @@ Before applying any schema change to a production table, work through this check
 | Segment count | How many segments will be reloaded and what is the estimated reload duration? | Duration estimated and communicated to stakeholders |
 | Minion tasks | Are any Minion tasks (RealtimeToOffline, MergeRollup) currently running that might conflict with the reload? | No competing Minion tasks active |
 
----
 
 ## Before and After Measurement Table
 
@@ -711,18 +694,16 @@ Before applying any schema change to a production table, work through this check
 | Rows returning non-zero `tip_amount` | 0 | 0 |
 | Controller rejection for type change attempt | — | HTTP 400 received |
 
----
 
 ## Reflection Prompts
 
 1. The `payment_gateway` column was added with `"defaultNullValue": "unknown"`. If you had added the column without a `defaultNullValue`, existing rows would return SQL `NULL` instead. Write a query that behaves differently depending on whether `payment_gateway` is `null` versus `"unknown"`. Explain which downstream consumers would be broken by the `null` behavior but tolerant of the `"unknown"` behavior.
 
-2. You have added `tip_amount` as a DOUBLE metric column. A data engineer proposes adding an inverted index on `tip_amount` so that queries like `WHERE tip_amount = 0.0` can use index lookups. Explain whether an inverted index on a continuous DOUBLE column is appropriate, and which index type should be used instead for queries with equality and range predicates on `tip_amount`.
+2. You have added `tip_amount` as a DOUBLE metric column. A data engineer proposes adding an inverted index on `tip_amount` so that queries like `WHERE tip_amount = 0.0` can use index lookups. Explain whether an inverted index on a continuous DOUBLE column is appropriate and which index type should be used instead for queries with equality and range predicates on `tip_amount`.
 
 3. The Controller rejected the attempt to change `fare_amount` from DOUBLE to STRING. Describe the complete migration procedure you would follow if the business requirement to store formatted currency strings in `fare_amount` were genuine and non-negotiable. Your procedure should avoid data loss and should not require taking the table offline.
 
 4. The schema change propagation diagram shows that the Broker receives the schema update from ZooKeeper before the segment reload is complete. During the window between the Broker accepting the new schema and the server reload finishing, a query runs that filters on `payment_gateway = 'stripe'`. Describe what the query returns in this window and why this behavior is safe from a correctness standpoint despite the inconsistency.
 
----
 
 [Previous: Lab 9 — Hybrid Tables and the Time Boundary](lab-09-hybrid-tables.md) | [Return to README](../README.md)

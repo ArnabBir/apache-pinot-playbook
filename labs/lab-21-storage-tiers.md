@@ -2,16 +2,15 @@
 
 ## Overview
 
-A production Pinot deployment accumulates data continuously. After several months, the majority of data in a large table is historical — queried infrequently, mostly for reporting, and never subject to point lookups or real-time dashboard traffic. Serving that historical data from the same SSD-backed, fully-indexed server pool as today's data wastes expensive fast storage and inflates infrastructure cost without improving the latency of any query that actually matters.
+A production Pinot deployment accumulates data continuously. After several months, the majority of data in a large table is historical — queried infrequently, mostly for reporting and never subject to point lookups or real-time dashboard traffic. Serving that historical data from the same SSD-backed, fully-indexed server pool as today's data wastes expensive fast storage and inflates infrastructure cost without improving the latency of any query that actually matters.
 
-Pinot's storage tier system addresses this asymmetry. You define a hot tier — servers with NVMe SSDs, high memory, and the full index suite — and a cold tier — servers with HDDs or object-backed filesystems and only the indexes needed for infrequent analytical queries. The Controller automatically moves segments from hot to cold based on time thresholds you configure. The Broker routes each query to the correct tier or tiers transparently, without any change to the query syntax.
+Pinot's storage tier system addresses this asymmetry. You define a hot tier — servers with NVMe SSDs, high memory and the full index suite — and a cold tier — servers with HDDs or object-backed filesystems and only the indexes needed for infrequent analytical queries. The Controller automatically moves segments from hot to cold based on time thresholds you configure. The Broker routes each query to the correct tier or tiers transparently, without any change to the query syntax.
 
-This lab configures a two-tier system for the `trip_events` realtime table: a hot tier retaining the most recent seven days and a cold tier serving all historical data. It also covers per-tier index overrides, segment relocation verification, and the cost and latency trade-offs that determine when tiered storage is the right architectural choice.
+This lab configures a two-tier system for the `trip_events` realtime table: a hot tier retaining the most recent seven days and a cold tier serving all historical data. It also covers per-tier index overrides, segment relocation verification and the cost and latency trade-offs that determine when tiered storage is the right architectural choice.
 
 > [!NOTE]
 > This lab builds on Labs 1 through 4. The `trip_events` realtime table must be populated with committed segments before the tier assignment steps will produce observable results. Minion must be running because the Minion-based `RealtimeToOfflineSegmentsTask` is the standard mechanism for moving data between tiers in hybrid configurations.
 
----
 
 ## Learning Objectives
 
@@ -26,11 +25,10 @@ This lab configures a two-tier system for the `trip_events` realtime table: a ho
 | Trigger a manual segment rebalance | `POST /tables/{tableName}/rebalance` returns a task ID and segments move to the correct tier |
 | Articulate the cost and latency trade-offs | You can populate the storage cost table with estimates for your workload's data volume and access pattern |
 
----
 
 ## The Tier Architecture
 
-The following diagram shows the full topology of a two-tier Pinot deployment. Hot and cold tiers share a single Controller, ZooKeeper ensemble, and deep store. The logical separation is maintained through instance tags: the Controller assigns segments to tagged instances, and the Broker resolves routing to the correct tagged server pool for each query.
+The following diagram shows the full topology of a two-tier Pinot deployment. Hot and cold tiers share a single Controller, ZooKeeper ensemble and deep store. The logical separation is maintained through instance tags: the Controller assigns segments to tagged instances and the Broker resolves routing to the correct tagged server pool for each query.
 
 ```mermaid
 flowchart TB
@@ -89,13 +87,12 @@ flowchart TB
     cold -->|"Segment backup"| deepstore
 ```
 
-The deep store is not a tier — it is the shared backup layer that both tiers use for segment persistence. When a segment is relocated from hot to cold, Minion writes a version of that segment (potentially with a different index configuration) back to the deep store, and the cold-tier server loads it from there. The hot-tier server then unloads the segment. At no point during this transition does the segment become unqueryable — the Broker continues routing to the hot-tier server until the cold-tier server confirms the new segment is online.
+The deep store is not a tier — it is the shared backup layer that both tiers use for segment persistence. When a segment is relocated from hot to cold, Minion writes a version of that segment (potentially with a different index configuration) back to the deep store and the cold-tier server loads it from there. The hot-tier server then unloads the segment. At no point during this transition does the segment become unqueryable — the Broker continues routing to the hot-tier server until the cold-tier server confirms the new segment is online.
 
----
 
 ## The Tiered Query Path
 
-A query that spans a time range covering both recent and historical data is handled by the Broker in a single scatter-gather operation. The Broker does not need to know which segments are on which tier — it consults the routing table, which the Controller maintains as segment assignments change, and fans out sub-queries to all instances that hold relevant segments.
+A query that spans a time range covering both recent and historical data is handled by the Broker in a single scatter-gather operation. The Broker does not need to know which segments are on which tier — it consults the routing table, which the Controller maintains as segment assignments change and fans out sub-queries to all instances that hold relevant segments.
 
 ```mermaid
 sequenceDiagram
@@ -124,7 +121,6 @@ sequenceDiagram
 
 The overall query latency is bounded by the slower tier. This is the fundamental trade-off in tiered storage: queries that touch only recent data are as fast as a hot-tier-only deployment, while queries spanning historical data are bounded by cold-tier latency. For workloads where historical queries are infrequent and latency requirements are relaxed, this trade-off is highly favorable.
 
----
 
 ## Step 1: Tag Servers with Tier Labels
 
@@ -194,7 +190,6 @@ Expected output:
 ]
 ```
 
----
 
 ## Step 2: Add Tier Configuration to trip_events_rt.table.json
 
@@ -205,7 +200,7 @@ curl -s "http://localhost:9000/tables/trip_events_REALTIME/tableConfigs" \
   | python3 -m json.tool > /tmp/trip_events_config.json
 ```
 
-Add the `tierConfigs` array at the top level of the table configuration object, as a sibling of `tableIndexConfig`, `tenants`, and `segmentsConfig`:
+Add the `tierConfigs` array at the top level of the table configuration object, as a sibling of `tableIndexConfig`, `tenants` and `segmentsConfig`:
 
 ```json
 {
@@ -257,11 +252,10 @@ curl -s "http://localhost:9000/tables/trip_events_REALTIME/tableConfigs" \
 
 The response should contain the `tierConfigs` block exactly as submitted.
 
----
 
 ## Step 3: Add Per-Tier Index Overrides Using tierOverwrites
 
-The hot tier serves recent data that is frequently queried by dashboards, real-time alerts, and operational queries. It warrants a full index suite: inverted indexes for equality filtering on dimension columns, bloom filters for point lookups by trip and driver ID, and range indexes for numeric and time-based predicates.
+The hot tier serves recent data that is frequently queried by dashboards, real-time alerts and operational queries. It warrants a full index suite: inverted indexes for equality filtering on dimension columns, bloom filters for point lookups by trip and driver ID and range indexes for numeric and time-based predicates.
 
 The cold tier serves historical data accessed primarily by batch reports and analytical queries. These queries tend to be broader range scans rather than point lookups. Maintaining bloom filters on cold-tier segments wastes storage without providing meaningful acceleration for those access patterns.
 
@@ -287,9 +281,9 @@ Add the `tierOverwrites` block to the table configuration, as a sibling of `tier
 }
 ```
 
-The hot tier retains four inverted index columns, two bloom filter columns, and two range index columns. The cold tier drops the bloom filters entirely and retains only the two most broadly useful inverted index columns and the time range index.
+The hot tier retains four inverted index columns, two bloom filter columns and two range index columns. The cold tier drops the bloom filters entirely and retains only the two most broadly useful inverted index columns and the time range index.
 
-The rationale for each removal in the cold tier is as follows. Bloom filters are designed for point lookup queries of the form `WHERE trip_id = 'abc123'`. Historical trip lookups are rare — most historical queries aggregate data by city, status, or time window, not by individual trip identifier. The storage cost of bloom filter bitmaps across hundreds of cold segments is not justified by the frequency of point lookups against them. The `merchant_id` and `service_tier` inverted indexes are also removed because historical reports typically group by `city` and `status`, not by merchant. Removing these indexes reduces the cold tier segment size, which directly reduces storage cost and speeds up cold tier segment loading.
+The rationale for each removal in the cold tier is as follows. Bloom filters are designed for point lookup queries of the form `WHERE trip_id = 'abc123'`. Historical trip lookups are rare — most historical queries aggregate data by city, status or time window, not by individual trip identifier. The storage cost of bloom filter bitmaps across hundreds of cold segments is not justified by the frequency of point lookups against them. The `merchant_id` and `service_tier` inverted indexes are also removed because historical reports typically group by `city` and `status`, not by merchant. Removing these indexes reduces the cold tier segment size, which directly reduces storage cost and speeds up cold tier segment loading.
 
 Submit the updated configuration with both `tierConfigs` and `tierOverwrites`:
 
@@ -311,7 +305,6 @@ Expected response:
 
 The `tierOverwrites` configuration takes effect when segments are moved to each tier. Segments already assigned to the cold tier need to be reloaded to rebuild indexes according to the cold-tier specification.
 
----
 
 ## Step 4: Verify Segment Tier Assignment
 
@@ -338,11 +331,10 @@ trip_events__0__164__20240224T000000Z  tier=coldTier  start=1708732800000
 trip_events__0__163__20240217T000000Z  tier=coldTier  start=1708128000000
 ```
 
-Segments whose creation time falls within the last seven days appear in the hot tier. Older segments appear in the cold tier. If all segments show `tier=not assigned`, the segment age has not yet crossed the threshold — you can artificially lower `segmentAge` in the tier config to `1h` for testing, or inspect segment creation times to confirm their age.
+Segments whose creation time falls within the last seven days appear in the hot tier. Older segments appear in the cold tier. If all segments show `tier=not assigned`, the segment age has not yet crossed the threshold — you can artificially lower `segmentAge` in the tier config to `1h` for testing or inspect segment creation times to confirm their age.
 
-You can also verify tier placement through the Controller UI. Navigate to `http://localhost:9000`, click Tables, select `trip_events_REALTIME`, and open the Segments tab. Each row in the segment list includes a hosting server column — confirm that hot-tier segments are on hotTier-tagged instances and cold-tier segments are on coldTier-tagged instances.
+You can also verify tier placement through the Controller UI. Navigate to `http://localhost:9000`, click Tables, select `trip_events_REALTIME` and open the Segments tab. Each row in the segment list includes a hosting server column — confirm that hot-tier segments are on hotTier-tagged instances and cold-tier segments are on coldTier-tagged instances.
 
----
 
 ## Step 5: Query Both Tiers
 
@@ -363,7 +355,7 @@ ORDER BY day_bucket DESC, daily_revenue DESC
 LIMIT 30
 ```
 
-The query covers 90 days of data, spanning both the hot tier (last 7 days) and the cold tier (days 8 through 90). The result set combines data from both tiers, and the query syntax is identical to what you would write against a single-tier table.
+The query covers 90 days of data, spanning both the hot tier (last 7 days) and the cold tier (days 8 through 90). The result set combines data from both tiers and the query syntax is identical to what you would write against a single-tier table.
 
 Inspect the BrokerResponse statistics to confirm that both tiers contributed:
 
@@ -388,7 +380,6 @@ Expected BrokerResponse fields to examine:
 
 If `numSegmentsQueried` is low and the result set is missing expected historical data, the cold tier may not yet have segments assigned to it — verify the segment ages and tier thresholds from Step 4.
 
----
 
 ## Step 6: Manually Trigger Segment Relocation
 
@@ -421,11 +412,10 @@ curl -s "http://localhost:9000/tables/trip_events/rebalanceStatus" \
 
 After the rebalance completes, repeat the segment metadata inspection from Step 4 to confirm all segments are on the expected tier.
 
----
 
 ## Tier Configuration Reference
 
-The following table documents every field in the `tierConfigs` array and the `tierOverwrites` object, with their types, requirements, and valid values.
+The following table documents every field in the `tierConfigs` array and the `tierOverwrites` object, with their types, requirements and valid values.
 
 | Field | Location | Type | Required | Description | Example Value |
 |-------|----------|------|:--------:|-------------|---------------|
@@ -442,7 +432,6 @@ The following table documents every field in the `tierConfigs` array and the `ti
 | `rangeIndexColumns` | `tierOverwrites.{tierName}.tableIndexConfig` | STRING ARRAY | No | Columns to build range indexes on for this tier's segments | `["fare_amount","event_time_ms"]` |
 | `noDictionaryColumns` | `tierOverwrites.{tierName}.tableIndexConfig` | STRING ARRAY | No | Columns to store without dictionary encoding on this tier; reduces memory for high-cardinality string columns on cold tier | `["trip_id","driver_id"]` |
 
----
 
 ## Storage Cost Analysis
 
@@ -459,7 +448,6 @@ Assumptions: 500 million rows, 200 bytes per row average, 90 days of retention, 
 
 Object storage as a cold tier introduces cache miss latency because segment files must be fetched from the object store before they can be scanned. Pinot provides a local disk cache on the serving node to mitigate this, but the first access to a cold segment after a server restart or cache eviction incurs the full network transfer cost. For workloads where a 5-second occasional query is acceptable in exchange for dramatically lower storage costs, this trade-off is favorable.
 
----
 
 ## When to Use Tiers vs Retention
 
@@ -474,22 +462,20 @@ Tiered storage and retention policies both address the problem of aging data. Th
 | Granularity | Tier transitions are time-based (segment age) | Retention is time-based (data age relative to time column) |
 | Reversibility | Segments can be moved back from cold to hot by rebalancing | Deleted rows cannot be recovered without re-ingesting from the original source |
 | Operational complexity | Requires tagging servers and configuring tier thresholds | Requires configuring `retentionTimeUnit` and `retentionTimeValue` in `segmentsConfig` |
-| Recommended for | Large historical datasets queried infrequently; cost reduction without data loss | Data minimization, GDPR compliance, and workloads where historical data genuinely has no value |
+| Recommended for | Large historical datasets queried infrequently; cost reduction without data loss | Data minimization, GDPR compliance and workloads where historical data genuinely has no value |
 
-The pattern used in most production deployments is: configure retention to discard data older than the compliance or business requirement window, and configure tiers to separate the recent queryable window (hot tier) from the older-but-retained window (cold tier). For example, a retention policy of 2 years plus a hot/cold split at 7 days means the most recent 7 days are served at full speed from SSD, days 8 through 730 are served at acceptable latency from HDD, and nothing older than 2 years occupies any storage at all.
+The pattern used in most production deployments is: configure retention to discard data older than the compliance or business requirement window and configure tiers to separate the recent queryable window (hot tier) from the older-but-retained window (cold tier). For example, a retention policy of 2 years plus a hot/cold split at 7 days means the most recent 7 days are served at full speed from SSD, days 8 through 730 are served at acceptable latency from HDD and nothing older than 2 years occupies any storage at all.
 
----
 
 ## Reflection Prompts
 
-1. The tiered query sequence diagram shows that the overall query latency is bounded by the slower tier. A colleague suggests that queries should be rewritten with explicit time predicates to avoid the cold tier when only recent data is needed. Describe the operational risk of encoding tier awareness into application queries, and explain why transparent tier routing in the Broker is the architecturally superior design even when it occasionally queries both tiers unnecessarily.
+1. The tiered query sequence diagram shows that the overall query latency is bounded by the slower tier. A colleague suggests that queries should be rewritten with explicit time predicates to avoid the cold tier when only recent data is needed. Describe the operational risk of encoding tier awareness into application queries and explain why transparent tier routing in the Broker is the architecturally superior design even when it occasionally queries both tiers unnecessarily.
 
-2. The `tierOverwrites` configuration in Step 3 removes bloom filters from the cold tier. A reporting query arrives that filters the historical data by `trip_id`: `WHERE trip_id = 'T-98712345'`. Describe what Pinot does at the cold tier when no bloom filter is present for `trip_id`, and quantify the performance difference between a cold-tier point lookup with and without the bloom filter.
+2. The `tierOverwrites` configuration in Step 3 removes bloom filters from the cold tier. A reporting query arrives that filters the historical data by `trip_id`: `WHERE trip_id = 'T-98712345'`. Describe what Pinot does at the cold tier when no bloom filter is present for `trip_id` and quantify the performance difference between a cold-tier point lookup with and without the bloom filter.
 
 3. The local Docker environment in this lab applies both `hotTier` and `coldTier` tags to the same physical server. A production deployment must separate these onto distinct physical servers. Design the instance tagging and `tierConfigs` configuration for a cluster with three NVMe SSD servers and two HDD servers. Specify which tags each server receives and explain what happens if one of the hot-tier servers fails while cold-tier servers remain healthy.
 
 4. A business requirement arrives: data between 30 and 90 days old must be retained but can be stored on object storage (S3), while data between 0 and 30 days must remain on local disk for latency reasons. Extend the `tierConfigs` configuration from Step 2 to add a third tier using `storageType: pinot_filesystem` with an S3 URI. Identify which fields from the Tier Configuration Reference table you need and write the complete three-tier `tierConfigs` block.
 
----
 
 [Previous: Lab 20 — Ingestion Methods and Transform Functions](lab-20-ingestion-methods.md) | [Next: Lab 1 — Local Cluster Setup](lab-01-local-cluster.md)

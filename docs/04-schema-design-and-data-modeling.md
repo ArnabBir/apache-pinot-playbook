@@ -185,7 +185,7 @@ Metrics are numeric columns designed for aggregation. They are the columns that 
 
 **Why metrics are a distinct category**
 
-Star tree optimization is the first consideration. When you configure a star tree index, Pinot pre-aggregates metric columns along dimension hierarchies, and only columns declared as metrics participate in these pre-aggregations. Default values behave differently as well: metric columns default to `0` (not null or empty string) when a value is missing during ingestion, because a missing fare amount should contribute zero to a sum rather than producing an error. Pinot can also apply specialized compression and encoding strategies to metric columns because it knows they are numeric and will be aggregated.
+Star tree optimization is the first consideration. When you configure a star tree index, Pinot pre-aggregates metric columns along dimension hierarchies and only columns declared as metrics participate in these pre-aggregations. Default values behave differently as well: metric columns default to `0` (not null or empty string) when a value is missing during ingestion, because a missing fare amount should contribute zero to a sum rather than producing an error. Pinot can also apply specialized compression and encoding strategies to metric columns because it knows they are numeric and will be aggregated.
 
 **Choosing the right numeric type**
 
@@ -222,7 +222,7 @@ Pinot stores time values as raw numbers without timezone metadata. If your sourc
 
 **Multiple dateTime fields**
 
-A schema can have multiple `dateTimeFieldSpec` entries. This is useful when your data has multiple meaningful timestamps (e.g., `created_time_ms`, `updated_time_ms`, `completed_time_ms`). Only one of them is designated as the `timeColumnName` in the table config, and that one drives segment pruning and retention. The others are queryable but do not participate in segment level time operations.
+A schema can have multiple `dateTimeFieldSpec` entries. This is useful when your data has multiple meaningful timestamps (e.g., `created_time_ms`, `updated_time_ms`, `completed_time_ms`). Only one of them is designated as the `timeColumnName` in the table config and that one drives segment pruning and retention. The others are queryable but do not participate in segment level time operations.
 
 ### Complex Fields
 
@@ -245,7 +245,7 @@ FROM trip_events
 WHERE JSON_MATCH(attributes, '"$.source" = ''simulator''')
 ```
 
-JSON columns are the right choice when the field contains semi-structured data with varying keys across records, when the schema of the nested data evolves frequently and you do not want to change the Pinot schema every time, or when the field is queried occasionally for filtering or extraction but is not part of the primary query hot path.
+JSON columns are the right choice when the field contains semi-structured data with varying keys across records, when the schema of the nested data evolves frequently and you do not want to change the Pinot schema every time or when the field is queried occasionally for filtering or extraction but is not part of the primary query hot path.
 
 JSON columns carry important trade-offs. They are stored as raw strings, consuming more storage than dictionary encoded dimensions. JSON index scans are slower than inverted index lookups on a first-class dimension column. JSON columns cannot participate in star tree pre-aggregation. If you find yourself querying the same JSON path in every request, extract it into a proper dimension column during ingestion.
 
@@ -373,7 +373,6 @@ Not every derived value should be precomputed. Use the following framework to de
 > [!TIP]
 > If you are writing the same `DATETIMECONVERT`, `DATETRUNC` or arithmetic expression in more than a handful of queries, that expression has earned its own column in the schema.
 
----
 ## Null Handling
 
 ### The Problem with Default Null Behavior
@@ -405,7 +404,7 @@ When enabled, Pinot maintains a null bitmap for each column in each segment. Thi
 
 ### Implications and Tradeoffs
 
-Enabling `enableColumnBasedNullHandling` has three concrete implications. The storage overhead is that each nullable column requires a null bitmap per segment. For columns that are rarely null this overhead is minimal (the bitmap compresses well), and for columns that are frequently null the overhead is still small relative to the column data itself. The query behavior changes such that `COUNT(column)` excludes nulls while `COUNT(*)` includes them. This matches standard SQL but may differ from the behavior your team is accustomed to if you have been running without null handling. The migration consideration is that enabling `enableColumnBasedNullHandling` on an existing table does not retroactively fix segments that were built without it. Those older segments still have default values instead of nulls, and you must reload or rebuild segments for the change to take full effect.
+Enabling `enableColumnBasedNullHandling` has three concrete implications. The storage overhead is that each nullable column requires a null bitmap per segment. For columns that are rarely null this overhead is minimal (the bitmap compresses well) and for columns that are frequently null the overhead is still small relative to the column data itself. The query behavior changes such that `COUNT(column)` excludes nulls while `COUNT(*)` includes them. This matches standard SQL but may differ from the behavior your team is accustomed to if you have been running without null handling. The migration consideration is that enabling `enableColumnBasedNullHandling` on an existing table does not retroactively fix segments that were built without it. Those older segments still have default values instead of nulls and you must reload or rebuild segments for the change to take full effect.
 
 > [!IMPORTANT]
 > Enable `enableColumnBasedNullHandling` on all new schemas. The storage overhead is negligible and the correctness benefits are substantial. The schemas in this repository all have it enabled.
@@ -480,7 +479,7 @@ Removing a column from the schema does not immediately delete the column data fr
 
 Design your schema as a **query serving contract**, not as a mirror of the source system. Include fields because they improve serving, not because they happen to exist upstream.
 
-Precompute repetitive time buckets and lightweight derived fields. If a transform appears in more than half your queries, it deserves its own column. Classify fields carefully: dimensions are for filtering and grouping, metrics are for aggregation, and datetime fields are for time based pruning and retention. Getting the classification wrong does not cause errors, but it absolutely prevents optimizations.
+Precompute repetitive time buckets and lightweight derived fields. If a transform appears in more than half your queries, it deserves its own column. Classify fields carefully: dimensions are for filtering and grouping, metrics are for aggregation and datetime fields are for time based pruning and retention. Getting the classification wrong does not cause errors, but it absolutely prevents optimizations.
 
 Keep primary keys minimal. Every primary key column adds to the composite key size in the upsert hash map, so include only the columns strictly necessary for uniqueness. Enable `enableColumnBasedNullHandling` on every new schema, as the storage overhead is negligible and the correctness benefit is significant.
 
@@ -493,7 +492,7 @@ Maintain dual contracts. Keep both a human readable explanation and a machine re
 
 Using only raw epoch timestamps when every query buckets by day or hour forces Pinot to apply a transform function on every row of every scan, so precompute the bucket instead. Declaring high cardinality identifiers as metrics (like a `trip_id`) prevents them from being used effectively in filters and produces nonsensical aggregation defaults.
 
-Leaving key semantics ambiguous in an upsert table is dangerous. Every team member must explicitly understand which columns form the primary key, which column orders updates and what happens to out-of-order arrivals. Over-using JSON columns is a significant performance killer: JSON columns are flexible but slow, and if you find yourself writing `JSON_EXTRACT_SCALAR` in every query for the same path, extract that path into a proper dimension column.
+Leaving key semantics ambiguous in an upsert table is dangerous. Every team member must explicitly understand which columns form the primary key, which column orders updates and what happens to out-of-order arrivals. Over-using JSON columns is a significant performance killer: JSON columns are flexible but slow and if you find yourself writing `JSON_EXTRACT_SCALAR` in every query for the same path, extract that path into a proper dimension column.
 
 Forgetting that schema changes do not retroactively fix old segments is a common operational mistake. Adding a new column or enabling null handling only affects new segments. Old segments must be actively reloaded or rebuilt. Adding multi value columns without understanding the query implications is equally hazardous. Multi value columns interact differently with `GROUP BY`, aggregation and certain index types, so test thoroughly before deploying to production.
 

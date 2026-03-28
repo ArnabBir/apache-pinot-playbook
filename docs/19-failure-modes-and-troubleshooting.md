@@ -483,7 +483,7 @@ Turn every meaningful incident into a durable repo artifact. If the incident was
 
 Keep the troubleshooting decision tree visible. Print it, post it on the team wiki or add it to the on-call handbook. It should be the first thing a responder sees when paged.
 
-Debug upsert problems from the producer side first. Most upsert issues originate in the producer's key assignment, ordering or delete marker logic, not in Pinot's upsert engine.
+Debug upsert problems from the producer side first. Most upsert issues originate in the producer's key assignment ordering or delete marker logic, not in Pinot's upsert engine.
 
 Check the simple things first. Before investigating complex distributed systems issues, verify that the table exists, the query syntax is correct, the servers are running and there is actually data in the table.
 

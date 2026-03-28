@@ -2,28 +2,26 @@
 
 ## Overview
 
-Resilience is not a property of the architecture diagram. It is a property of the system as it actually behaves under failure conditions. This lab treats that distinction seriously. You will establish a measurable baseline, then systematically kill each Pinot component one at a time, observe what breaks and what does not, and follow a structured recovery procedure. Every experiment produces a recorded result. By the end, you will have first-hand evidence, not second-hand documentation, about how your cluster responds to each class of failure.
+Resilience is not a property of the architecture diagram. It is a property of the system as it actually behaves under failure conditions. This lab treats that distinction seriously. You will establish a measurable baseline, then systematically kill each Pinot component one at a time, observe what breaks and what does not and follow a structured recovery procedure. Every experiment produces a recorded result. By the end, you will have first-hand evidence, not second-hand documentation, about how your cluster responds to each class of failure.
 
-This lab follows the principles of chaos engineering as formalized by the chaos engineering community: start with a steady state, form a hypothesis, inject the failure, observe the actual outcome, and compare it to the hypothesis. The gap between hypothesis and observation is where operational wisdom lives.
+This lab follows the principles of chaos engineering as formalized by the chaos engineering community: start with a steady state, form a hypothesis, inject the failure, observe the actual outcome and compare it to the hypothesis. The gap between hypothesis and observation is where operational wisdom lives.
 
 > [!NOTE]
-> This lab requires all five containers from the local cluster — `pinot-zookeeper`, `pinot-kafka`, `pinot-controller`, `pinot-broker`, and `pinot-server` — to be running with data loaded from Labs 1 through 3. Confirm cluster health before beginning any experiment.
+> This lab requires all five containers from the local cluster — `pinot-zookeeper`, `pinot-kafka`, `pinot-controller`, `pinot-broker` and `pinot-server` — to be running with data loaded from Labs 1 through 3. Confirm cluster health before beginning any experiment.
 
----
 
 ## Learning Objectives
 
 | Objective | Success Criterion |
 |-----------|-------------------|
 | Establish a pre-chaos baseline | All five health checks pass and baseline query latency is recorded |
-| Characterize server failure blast radius | You can state which queries fail, which succeed, and why, when the server is killed |
+| Characterize server failure blast radius | You can state which queries fail, which succeed and why, when the server is killed |
 | Characterize broker failure blast radius | You can distinguish between data unavailability and query-path unavailability |
 | Characterize controller failure blast radius | You can explain why SELECT queries continue but segment pushes fail during controller outage |
 | Characterize ZooKeeper failure blast radius | You can explain the stale-cache window and why ZooKeeper monitoring is the highest priority |
 | Execute recovery and measure recovery time | You have recorded time-to-recovery for all four experiments |
 | Produce a blast radius summary | Your summary table contains accurate findings from all four experiments |
 
----
 
 ## The Chaos Engineering Methodology
 
@@ -43,7 +41,6 @@ flowchart LR
 
 The reason Phase 3 must precede Phase 4 is that observing the blast radius before intervening gives you real data about the failure mode. Teams that jump immediately to mitigation accumulate no knowledge about how their system actually fails. Chaos engineering is a knowledge-building practice first and a reliability practice second.
 
----
 
 ## Pre-Chaos Baseline Measurement
 
@@ -119,7 +116,6 @@ ORDER BY gmv DESC
 
 Do not proceed until this table is complete.
 
----
 
 ## Experiment 1: Kill the Pinot Server
 
@@ -248,7 +244,6 @@ curl -s "http://localhost:9000/segments/trip_events_REALTIME" | python3 -m json.
 | `trip_events` row count after recovery | |
 | Average query latency after recovery | |
 
----
 
 ## Experiment 2: Kill the Pinot Broker
 
@@ -363,7 +358,6 @@ SELECT city, COUNT(*) AS trips FROM trip_events GROUP BY city ORDER BY trips DES
 | Total experiment duration (kill to first query) | |
 | Contrast: how does this compare to server recovery time? | |
 
----
 
 ## Experiment 3: Kill the Pinot Controller
 
@@ -419,7 +413,7 @@ GROUP BY city
 ORDER BY trips DESC
 ```
 
-Record whether the query succeeds, its `timeUsedMs`, and whether the result matches the baseline values. In a correctly configured cluster, this query returns normally even with the controller offline.
+Record whether the query succeeds, its `timeUsedMs` and whether the result matches the baseline values. In a correctly configured cluster, this query returns normally even with the controller offline.
 
 **Step 4.** Attempt a segment push operation to confirm it fails.
 
@@ -475,7 +469,7 @@ docker start pinot-controller
 docker logs pinot-controller --follow | grep -i "zookeeper\|state\|tables\|started\|helixmanager" | head -40
 ```
 
-The controller connects to ZooKeeper, reads the current state of all tables and segments, reconstructs its in-memory view, and begins processing the Helix state machine transitions that accumulated while it was offline. This reconciliation is automatic.
+The controller connects to ZooKeeper, reads the current state of all tables and segments, reconstructs its in-memory view and begins processing the Helix state machine transitions that accumulated while it was offline. This reconciliation is automatic.
 
 **Step 10.** Poll the controller health endpoint.
 
@@ -499,7 +493,6 @@ curl -s http://localhost:9000/tables | python3 -m json.tool
 | Were queries affected during controller restart? | |
 | Total experiment duration (kill to admin operations restored) | |
 
----
 
 ## Experiment 4: Kill ZooKeeper
 
@@ -522,7 +515,7 @@ flowchart TD
     zk_down --> immediate --> short_window --> degradation --> zk_returns
 ```
 
-The critical insight is that ZooKeeper failure degrades the system gradually rather than stopping it instantly. The system has built-in resilience through cached state, but that resilience has a time limit. After ZooKeeper is down long enough, components begin failing in cascade: consuming segments stall, routing tables become stale, and the cluster loses its ability to adapt to changes.
+The critical insight is that ZooKeeper failure degrades the system gradually rather than stopping it instantly. The system has built-in resilience through cached state, but that resilience has a time limit. After ZooKeeper is down long enough, components begin failing in cascade: consuming segments stall, routing tables become stale and the cluster loses its ability to adapt to changes.
 
 ### Experiment 4 Execution
 
@@ -611,7 +604,6 @@ until curl -s http://localhost:9000/health | grep -q "OK" && curl -s http://loca
 | Time from ZK restart to first successful query | |
 | Total experiment duration (kill to full recovery) | |
 
----
 
 ## Blast Radius Summary
 
@@ -624,9 +616,8 @@ Complete this table after all four experiments are finished. These are your empi
 | `pinot-controller` | | | | | |
 | `pinot-zookeeper` | | | | | |
 
-Fill in the Data Safety column with one of: **No risk** (data never in danger), **Reduced availability** (data on disk, temporarily inaccessible), or **Degraded freshness** (ingestion stalled, existing data safe).
+Fill in the Data Safety column with one of: **No risk** (data never in danger), **Reduced availability** (data on disk, temporarily inaccessible) or **Degraded freshness** (ingestion stalled, existing data safe).
 
----
 
 ## Chaos Gameday Planning Template
 
@@ -668,7 +659,6 @@ After each gameday, produce a findings document with the following sections.
 4. Runbook gaps discovered — recovery steps that were unclear or missing.
 5. Action items with owners and target dates.
 
----
 
 ## Reflection Prompts
 
@@ -680,6 +670,5 @@ After each gameday, produce a findings document with the following sections.
 
 4. After completing all four experiments, rank the four components by their contribution to query availability and write a one-paragraph monitoring priority rationale that explains to a new team member which component deserves the most aggressive alerting and why the ranking is not simply based on "how fast queries fail."
 
----
 
 [Previous: Lab 8 — SLO and Incident Drill](lab-08-slo-incident.md) | [Next: Lab 14 — Fraud Detection Analytics](lab-14-fraud-detection.md)

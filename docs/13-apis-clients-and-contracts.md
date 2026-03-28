@@ -2,16 +2,16 @@
 
 ## Why This Chapter Determines the Longevity of Your Analytics Platform
 
-Apache Pinot in production is never used in isolation. It sits at the center of a data ecosystem: upstream producers publish events into Kafka, Pinot ingests and indexes those events, and downstream consumers query the results through service layers.
+Apache Pinot in production is never used in isolation. It sits at the center of a data ecosystem: upstream producers publish events into Kafka, Pinot ingests and indexes those events and downstream consumers query the results through service layers.
 
 The quality of the contracts governing each of these boundaries determines whether your platform can evolve gracefully over months and years or whether every change triggers a cascade of breakages.
 
 Most Pinot tutorials stop after demonstrating `SELECT * FROM my_table LIMIT 10`. In reality, the moment you expose Pinot-backed analytics to real consumers, you inherit every problem that API design has ever solved. Versioning and backward compatibility ensures that old clients do not break when schemas grow. Error propagation distinguishes between a query syntax error and a transient cluster timeout. Timeout management protects the cluster from long-running queries that never finish. Caching and documentation reduce redundant load and provide a clear reference for developers.
 
 > [!IMPORTANT]
-> Teams that treat these concerns as afterthoughts end up with brittle systems where a simple schema change can silently corrupt dashboards, break mobile applications, and invalidate cached results.
+> Teams that treat these concerns as afterthoughts end up with brittle systems where a simple schema change can silently corrupt dashboards, break mobile applications and invalidate cached results.
 
-This chapter treats API contracts as first-class engineering artifacts. We will walk through the three layers of contracts that govern a well-designed Pinot platform: the event contract (the shape of data entering the system), the Pinot contract (the internal schema and table configurations), and the service contract (the public-facing API surface your users actually touch).
+This chapter treats API contracts as first-class engineering artifacts. We will walk through the three layers of contracts that govern a well-designed Pinot platform: the event contract (the shape of data entering the system), the Pinot contract (the internal schema and table configurations) and the service contract (the public-facing API surface your users actually touch).
 
 ## Pinot's Built-in APIs
 
@@ -115,13 +115,13 @@ The controller exposes a rich set of administrative endpoints for managing schem
 
 Pinot exposes health check and metrics endpoints on each component. The controller health endpoint at `GET http://<controller>:9000/health` returns a simple status indicating whether the controller is operational. The broker health endpoint at `GET http://<broker>:8099/health` indicates broker readiness for query routing. The cluster health endpoint at `GET http://<controller>:9000/health/instances` returns the status of all instances in the cluster.
 
-For JMX-style metrics, Pinot publishes Prometheus-compatible metrics at `/metrics` on each component when configured. These metrics cover query latency histograms, segment counts, ingestion lag, heap usage, and dozens of other operational signals.
+For JMX-style metrics, Pinot publishes Prometheus-compatible metrics at `/metrics` on each component when configured. These metrics cover query latency histograms, segment counts, ingestion lag, heap usage and dozens of other operational signals.
 
 ### Swagger UI
 
 Every Pinot component ships with an embedded Swagger UI that provides interactive API documentation, accessible at `http://<controller>:9000/help` for the controller and `http://<broker>:8099/help` for the broker.
 
-The Swagger UI is invaluable during development and debugging. It lets you explore every available endpoint, inspect request and response schemas, and execute API calls directly from the browser.
+The Swagger UI is invaluable during development and debugging. It lets you explore every available endpoint, inspect request and response schemas and execute API calls directly from the browser.
 
 > [!TIP]
 > The Swagger UI at port 9000 should be your first stop when exploring what operations are available on a running Pinot cluster.
@@ -133,14 +133,14 @@ The Swagger UI is invaluable during development and debugging. It lets you explo
 
 Exposing Pinot's broker SQL endpoint directly to application consumers is tempting because it works immediately with zero additional code. It is also one of the most common architectural mistakes in Pinot deployments.
 
-The problems compound over time. When a consumer writes `SELECT fare_amount FROM trip_events WHERE city = 'bengaluru'`, they are coupling directly to the column name, the table name, and the data type. Rename a column and every consumer breaks simultaneously. The broker will attempt to execute any SQL it receives, so without a service layer there is nothing preventing a consumer from running `SELECT * FROM trip_events` without a `LIMIT`, scanning hundreds of millions of rows. Different consumers need different response formats, a mobile application needs a compact JSON payload with camelCase keys, a dashboarding tool needs a tabular format, a partner API needs envelope metadata with pagination, and a raw endpoint serves none of them well. Without a caching layer, dashboards that re-execute the same query hundreds of times per minute waste cluster resources. When a downstream service has a 500ms SLA, the broker has no way to know that, but a service layer can enforce application-level timeouts. The broker's access control operates at the table level, while a service layer can enforce business-level access rules.
+The problems compound over time. When a consumer writes `SELECT fare_amount FROM trip_events WHERE city = 'bengaluru'`, they are coupling directly to the column name, the table name and the data type. Rename a column and every consumer breaks simultaneously. The broker will attempt to execute any SQL it receives, so without a service layer there is nothing preventing a consumer from running `SELECT * FROM trip_events` without a `LIMIT`, scanning hundreds of millions of rows. Different consumers need different response formats, a mobile application needs a compact JSON payload with camelCase keys, a dashboarding tool needs a tabular format, a partner API needs envelope metadata with pagination and a raw endpoint serves none of them well. Without a caching layer, dashboards that re-execute the same query hundreds of times per minute waste cluster resources. When a downstream service has a 500ms SLA, the broker has no way to know that, but a service layer can enforce application-level timeouts. The broker's access control operates at the table level, while a service layer can enforce business-level access rules.
 
 ### Service Layer Architecture Pattern
 
 The recommended pattern is to place a thin service layer between Pinot and your consumers. This service layer has four responsibilities:
 
 1. **Translate business requests into Pinot queries.** The service receives a request like "give me KPIs for Bengaluru in the last 60 minutes" and translates it into the appropriate SQL query.
-2. **Validate and sanitize inputs.** The service enforces parameter bounds, prevents injection, and rejects malformed requests before they reach Pinot.
+2. **Validate and sanitize inputs.** The service enforces parameter bounds, prevents injection and rejects malformed requests before they reach Pinot.
 3. **Shape and cache responses.** The service transforms Pinot's raw response into a consumer-friendly format and caches results where appropriate.
 4. **Propagate errors and timeouts.** The service maps Pinot errors to meaningful HTTP status codes and enforces application-level timeout budgets.
 
@@ -210,7 +210,7 @@ sequenceDiagram
     FastAPI-->>Consumer: KPIResponse JSON (from cache)
 ```
 
-This endpoint provides several guarantees that a raw SQL endpoint does not. The endpoint is `/api/v1/kpis`, not `/query/sql`, so the consumer does not need to know SQL, table names, or column names. The `window_minutes` parameter is constrained between 1 and 10,080 (one week), and a request for `window_minutes=999999` is rejected before it reaches Pinot. The `KPIResponse` model guarantees the shape of the response. The `/api/v1/` prefix allows the team to introduce `/api/v2/kpis` with a different response shape without breaking existing consumers. The `AnalyticsProvider` dependency can be backed by Pinot in production or by a deterministic in-memory provider during testing.
+This endpoint provides several guarantees that a raw SQL endpoint does not. The endpoint is `/api/v1/kpis`, not `/query/sql`, so the consumer does not need to know SQL, table names or column names. The `window_minutes` parameter is constrained between 1 and 10,080 (one week) and a request for `window_minutes=999999` is rejected before it reaches Pinot. The `KPIResponse` model guarantees the shape of the response. The `/api/v1/` prefix allows the team to introduce `/api/v2/kpis` with a different response shape without breaking existing consumers. The `AnalyticsProvider` dependency can be backed by Pinot in production or by a deterministic in-memory provider during testing.
 
 ### Response Caching Strategies
 
@@ -241,7 +241,7 @@ flowchart LR
 
 ### Error Handling and Timeout Propagation
 
-Pinot queries can fail for many reasons: broker unavailability, server timeouts, query syntax errors, resource exhaustion, or segment loading delays. A well-designed service layer maps these failures to appropriate HTTP responses:
+Pinot queries can fail for many reasons: broker unavailability, server timeouts, query syntax errors, resource exhaustion or segment loading delays. A well-designed service layer maps these failures to appropriate HTTP responses:
 
 | Pinot Failure | HTTP Response | Guidance |
 |---------------|---------------|----------|
@@ -288,9 +288,9 @@ flowchart LR
 
 ### What AsyncAPI Is and Why It Matters for Streaming Platforms
 
-AsyncAPI is to event-driven architectures what OpenAPI is to REST APIs. It provides a machine-readable specification format for describing message channels (such as Kafka topics), the messages that flow through them, and the schemas those messages conform to.
+AsyncAPI is to event-driven architectures what OpenAPI is to REST APIs. It provides a machine-readable specification format for describing message channels (such as Kafka topics), the messages that flow through them and the schemas those messages conform to.
 
-Without an explicit event contract, Kafka topics become implicit APIs. Producers add fields whenever they want. Consumers parse what they can and silently ignore what they cannot. When Pinot ingests from these topics, schema mismatches surface as null columns, type errors, or silently dropped records. AsyncAPI makes the contract explicit, versionable, and testable.
+Without an explicit event contract, Kafka topics become implicit APIs. Producers add fields whenever they want. Consumers parse what they can and silently ignore what they cannot. When Pinot ingests from these topics, schema mismatches surface as null columns, type errors or silently dropped records. AsyncAPI makes the contract explicit, versionable and testable.
 
 ### Annotated AsyncAPI Example from This Repository
 
@@ -378,20 +378,20 @@ The `headers.key` property with the description "Must be set to trip_id" is a co
 
 ### Schema Evolution Rules
 
-Event contracts evolve over time. The key principle for safe evolution in a Pinot context is: additive changes are safe, and removal or type changes are breaking.
+Event contracts evolve over time. The key principle for safe evolution in a Pinot context is: additive changes are safe and removal or type changes are breaking.
 
-Safe changes (backward compatible) include adding a new optional field to the payload, adding a new enum value to an existing field, adding a new channel or operation, and increasing the maximum length of a string field.
+Safe changes (backward compatible) include adding a new optional field to the payload, adding a new enum value to an existing field, adding a new channel or operation and increasing the maximum length of a string field.
 
-Breaking changes that require coordination include removing a required field, changing the type of an existing field (for example, from `string` to `integer`), renaming a field, changing the message key semantics, and changing the topic partitioning strategy.
+Breaking changes that require coordination include removing a required field, changing the type of an existing field (for example, from `string` to `integer`), renaming a field, changing the message key semantics and changing the topic partitioning strategy.
 
-When a breaking change is unavoidable, the recommended approach is to version the topic (for example, `trip-events-v2`), run both versions in parallel during the migration window, and cut over consumers one at a time.
+When a breaking change is unavoidable, the recommended approach is to version the topic (for example, `trip-events-v2`), run both versions in parallel during the migration window and cut over consumers one at a time.
 
 
 ## Payload Contracts with JSON Schema
 
 ### How JSON Schema Validates Producer Payloads
 
-JSON Schema provides a language-agnostic way to describe the structure, types, and constraints of JSON payloads. In a Pinot platform, JSON Schema serves as the ground truth for what a valid event looks like before it enters Kafka.
+JSON Schema provides a language-agnostic way to describe the structure, types and constraints of JSON payloads. In a Pinot platform, JSON Schema serves as the ground truth for what a valid event looks like before it enters Kafka.
 
 The file [`contracts/jsonschema/trip-event.schema.json`](contracts/jsonschema/trip-event.schema.json) defines the canonical TripEvent schema:
 
@@ -422,7 +422,7 @@ flowchart LR
     style D fill:#dc382d,color:#fff
 ```
 
-Key design choices in this schema include the use of `additionalProperties: false` to ensure that producers cannot introduce undocumented fields, explicit listing of required fields so that a producer omitting `event_time_ms` will fail validation immediately, enum constraints via `$defs` for the `City`, `EventType`, `ServiceTier` and `PaymentMethod` types, and a minimum value of 1 on `event_version` to prevent producers from sending version 0.
+Key design choices in this schema include the use of `additionalProperties: false` to ensure that producers cannot introduce undocumented fields, explicit listing of required fields so that a producer omitting `event_time_ms` will fail validation immediately, enum constraints via `$defs` for the `City`, `EventType`, `ServiceTier` and `PaymentMethod` types and a minimum value of 1 on `event_version` to prevent producers from sending version 0.
 
 ### Relationship Between JSON Schema and Pinot Schema
 
@@ -441,7 +441,7 @@ The two schemas should be kept in alignment, but they will never be identical. T
 
 Contracts are only useful if they are tested. The [`scripts/generate_contracts.py`](scripts/generate_contracts.py) script generates the OpenAPI and JSON Schema artifacts from the Python models.
 
-A robust CI pipeline validates contracts at three levels. First, schema validity: verify that the JSON Schema, AsyncAPI, and OpenAPI files are syntactically valid. Second, example validation: validate sample payloads against the JSON Schema. Third, contract consistency: verify that field names and types in the JSON Schema align with the corresponding Pinot schema.
+A robust CI pipeline validates contracts at three levels. First, schema validity: verify that the JSON Schema, AsyncAPI and OpenAPI files are syntactically valid. Second, example validation: validate sample payloads against the JSON Schema. Third, contract consistency: verify that field names and types in the JSON Schema align with the corresponding Pinot schema.
 
 ```mermaid
 flowchart TB
@@ -473,13 +473,13 @@ Teams that automate this validation catch drift early, before it reaches Kafka o
 
 The OpenAPI specification for the demo API ([`contracts/openapi/analytics-api.yaml`](contracts/openapi/analytics-api.yaml)) is generated automatically from the FastAPI application using the [`scripts/generate_contracts.py`](scripts/generate_contracts.py) script. This is the code-first approach. The alternative is the contract-first approach: you write the OpenAPI specification by hand first, then generate server stubs and client SDKs from it.
 
-The code-first approach keeps the specification always in sync with the implementation, allows developers to work in their native language and framework, and makes type annotations serve double duty as documentation and runtime validation. The contract-first approach means the API design is reviewed and agreed upon before any implementation begins, allows multiple teams to work in parallel, and makes the specification the single source of truth.
+The code-first approach keeps the specification always in sync with the implementation, allows developers to work in their native language and framework and makes type annotations serve double duty as documentation and runtime validation. The contract-first approach means the API design is reviewed and agreed upon before any implementation begins, allows multiple teams to work in parallel and makes the specification the single source of truth.
 
 For Pinot-backed analytics APIs, the code-first approach tends to work well because the API surface is relatively small and tightly coupled to the analytical model.
 
 ### Versioning Strategies
 
-API versioning for analytics services follows the same principles as any REST API. URL path versioning uses `/api/v1/kpis` and `/api/v2/kpis` to namespace versions. Additive changes within a version include new optional query parameters, new fields in the response, and new endpoints. Major version bumps are required when renaming a response field, changing a data type, or removing an endpoint. When you introduce v2, add a `Sunset` header to v1 responses to signal deprecation.
+API versioning for analytics services follows the same principles as any REST API. URL path versioning uses `/api/v1/kpis` and `/api/v2/kpis` to namespace versions. Additive changes within a version include new optional query parameters, new fields in the response and new endpoints. Major version bumps are required when renaming a response field, changing a data type or removing an endpoint. When you introduce v2, add a `Sunset` header to v1 responses to signal deprecation.
 
 
 ## The Contract Hierarchy
@@ -488,15 +488,15 @@ The most useful mental model for reasoning about contracts in a Pinot-based anal
 
 ### Layer 1: Event Contract (AsyncAPI + JSON Schema)
 
-This is the contract between producers and Kafka. It defines what messages look like, what keys are used, what fields are required, and what values are valid.
+This is the contract between producers and Kafka. It defines what messages look like, what keys are used, what fields are required and what values are valid.
 
 ### Layer 2: Pinot Contract (Schema + Table Config)
 
-This is the contract between Kafka and Pinot. It defines which fields from the event are ingested, what data types they are stored as, what indexes are applied, and how time columns are interpreted.
+This is the contract between Kafka and Pinot. It defines which fields from the event are ingested, what data types they are stored as, what indexes are applied and how time columns are interpreted.
 
 ### Layer 3: Service Contract (OpenAPI)
 
-This is the contract between Pinot and downstream consumers. It defines what endpoints are available, what parameters they accept, what response shapes they return, and what error codes they produce.
+This is the contract between Pinot and downstream consumers. It defines what endpoints are available, what parameters they accept, what response shapes they return and what error codes they produce.
 
 ```mermaid
 flowchart TB
@@ -606,17 +606,17 @@ flowchart TB
 
 ## Operating Heuristics
 
-Keeping producer contracts, Pinot configs, and service contracts in the same repository makes cross-layer review feasible and ensures that a single Pull Request can cover the transition from data ingestion to API delivery.
+Keeping producer contracts, Pinot configs and service contracts in the same repository makes cross-layer review feasible and ensures that a single Pull Request can cover the transition from data ingestion to API delivery.
 
-Generate what can be generated and validate what cannot. The OpenAPI spec should be generated from service code to ensure it never drifts. JSON Schemas should be generated from model definitions. Only the AsyncAPI document — which describes the handshake of the event stream — should typically be hand-written.
+Generate what can be generated and validate what cannot. The OpenAPI spec should be generated from service code to ensure it never drifts. JSON Schemas should be generated from model definitions. Only the AsyncAPI document - which describes the handshake of the event stream - should typically be hand-written.
 
 Treat event keys as part of the contract. For features like upsert, the Kafka message key is just as important as any field in the payload. It is not an implementation detail; it is a uniqueness constraint. Version your APIs from day one, since retrofitting versioning (moving from `/api/` to `/api/v1/`) is significantly more painful than starting with a versioned path.
 
-Cache at the service layer, not the broker. The service layer has the context to understand a consumer's specific freshness requirements, whereas the Pinot Broker treats all queries as equally "fresh." Set tight application-level timeouts so that your service layer timeout is tighter than the Pinot Broker timeout — this ensures your service fails gracefully and returns a meaningful error to the user before the underlying infrastructure hits a hard limit. Document the three-layer contract model (Event, Table, API) during onboarding so that new team members understand it before making changes that affect downstream consumers.
+Cache at the service layer, not the broker. The service layer has the context to understand a consumer's specific freshness requirements, whereas the Pinot Broker treats all queries as equally "fresh." Set tight application-level timeouts so that your service layer timeout is tighter than the Pinot Broker timeout - this ensures your service fails gracefully and returns a meaningful error to the user before the underlying infrastructure hits a hard limit. Document the three-layer contract model (Event, Table, API) during onboarding so that new team members understand it before making changes that affect downstream consumers.
 
 ## Common Pitfalls
 
-API-model drift occurs when a service team adds a new API endpoint assuming a column exists before the Pinot schema has been updated. Treating schema validation as optional for internal teams is a mistake — internal producers are just as likely to publish malformed data as external partners.
+API-model drift occurs when a service team adds a new API endpoint assuming a column exists before the Pinot schema has been updated. Treating schema validation as optional for internal teams is a mistake - internal producers are just as likely to publish malformed data as external partners.
 
 Publishing raw SQL access to every consumer is an anti-pattern. While appropriate for analysts, mobile apps and partner integrations should always consume curated analytics products via REST or GraphQL. In upsert tables, if the producer changes how the Kafka message key is constructed, deduplication breaks instantly, leading to duplicate or lost records.
 
@@ -624,7 +624,7 @@ Caching Pinot responses without considering schema change events can produce inc
 
 ## Practice Prompts
 
-1.  **Asset Comparison:** Explain the fundamental difference between the OpenAPI and AsyncAPI assets in this repository. Which specific layer of the contract hierarchy (Event, Table, or API) does each one govern?
+1.  **Asset Comparison:** Explain the fundamental difference between the OpenAPI and AsyncAPI assets in this repository. Which specific layer of the contract hierarchy (Event, Table or API) does each one govern?
 2.  **Schema Redundancy:** Why is JSON Schema useful even though Pinot already has its own internal schemas? Provide a concrete example of a data error that a JSON Schema would catch but a Pinot schema would ignore.
 3.  **Breaking Changes:** Provide an example of a "breaking change" in an event stream contract. Outline a step-by-step plan to execute this change safely in a high-traffic production environment.
 4.  **Caching Strategy:** Design a caching strategy for a `/api/v1/kpis` endpoint. How would you balance data freshness with the goal of reducing Pinot query load? What specific parameters would you include in your cache key?
