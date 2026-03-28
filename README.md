@@ -7,7 +7,7 @@
 <p align="center"><em>Source: <a href="https://docs.pinot.apache.org/basics/architecture">Apache Pinot Documentation</a></em></p>
 
 
-The Apache Pinot Playbook is a graduate-level guide to [Apache Pinot](https://pinot.apache.org/), a real-time distributed OLAP datastore engineered for user-facing analytics at massive scale. Twenty-two chapters, twenty-one hands-on labs and a complete capstone project take you from first principles through production-grade deployment.
+The Apache Pinot Playbook is a graduate-level guide to [Apache Pinot](https://pinot.apache.org/), a real time distributed OLAP datastore engineered for user-facing analytics at massive scale. Twenty two chapters, twenty one hands on labs and a complete capstone project take you from first principles through production-grade deployment.
 
 This repository is designed to be read **as a book** and operated **as a working codebase**. Every chapter pairs deep technical narrative with runnable artifacts: a Docker Compose topology, Pinot schemas, table configurations, Kafka streaming pipelines, batch ingestion jobs, OpenAPI and AsyncAPI data contracts, SQL query packs and Python simulations that make segment pruning, star-tree pre-aggregation and upsert behavior observable and measurable.
 
@@ -19,30 +19,30 @@ Pinot divides its responsibilities across three distinct planes. The **control p
 ```mermaid
 flowchart TB
     subgraph ext["EXTERNAL"]
-        client["Client\nBrowser · Terminal · Application"]
+        client["Client<br/>Browser · Terminal · Application"]
     end
 
     subgraph cp["CONTROL PLANE"]
-        ctrl["Controller\nAdmin APIs · Schema Management\nSegment Assignment · Web UI\nPort 9000"]
-        zk["ZooKeeper / Helix\nIdeal State · External View\nLeader Election · Routing Tables\nPort 2181"]
+        ctrl["Controller<br/>Admin APIs · Schema Management<br/>Segment Assignment · Web UI<br/>Port 9000"]
+        zk["ZooKeeper / Helix<br/>Ideal State · External View<br/>Leader Election · Routing Tables<br/>Port 2181"]
         ctrl <--> zk
     end
 
     subgraph qp["QUERY PLANE"]
-        broker["Broker\nSQL Endpoint · Segment Pruning\nScatter-Gather-Merge\nPort 8099"]
-        serverA["Server A\nSegment Hosting · Index Scanning\nPartial Aggregation · Port 8098"]
-        serverB["Server B\nSegment Hosting · Index Scanning\nPartial Aggregation · Port 8098"]
+        broker["Broker<br/>SQL Endpoint · Segment Pruning<br/>Scatter-Gather-Merge<br/>Port 8099"]
+        serverA["Server A<br/>Segment Hosting · Index Scanning<br/>Partial Aggregation · Port 8098"]
+        serverB["Server B<br/>Segment Hosting · Index Scanning<br/>Partial Aggregation · Port 8098"]
         broker --> serverA
         broker --> serverB
     end
 
     subgraph mp["MAINTENANCE PLANE"]
-        minion["Minion\nMerge-Rollup · Purge\nConvert-and-Push"]
+        minion["Minion<br/>Merge-Rollup · Purge<br/>Convert-and-Push"]
     end
 
     subgraph ing["INGESTION"]
-        kafka["Apache Kafka\nRealtime Stream Source\nPort 9092"]
-        batch["Batch Jobs\nSpark / Hadoop / S3"]
+        kafka["Apache Kafka<br/>Realtime Stream Source<br/>Port 9092"]
+        batch["Batch Jobs<br/>Spark / Hadoop / S3"]
     end
 
     client -->|"SQL over HTTP"| broker
@@ -119,7 +119,7 @@ flowchart TB
 | 99 | [References](docs/99-references.md) | Curated papers, talks and documentation links |
 
 
-## Hands-On Labs
+## Hands On Labs
 
 Twenty-one labs organized across five progressive phases. Every lab contains a conceptual diagram, a challenge section that asks you to design before you build, a measurement tracking table with before/after numbers and four reflection prompts. See the full [Lab Index](labs/README.md) for suggested learning paths by goal.
 
@@ -175,7 +175,7 @@ Twenty-one labs organized across five progressive phases. Every lab contains a c
 ```
 .
 ├── docs/           22 playbook chapters from preface through capstone
-├── labs/           21 hands-on labs across 5 progressive phases
+├── labs/           21 hands on labs across 5 progressive phases
 ├── diagrams/       Mermaid source files for architecture and flow diagrams
 ├── schemas/        Pinot schema definitions for trip_events, trip_state, merchants_dim
 ├── tables/         Annotated Pinot table configurations

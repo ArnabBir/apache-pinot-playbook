@@ -382,7 +382,7 @@ Benchmarking only single-query latency on a quiet cluster measures best-case per
 
 ## Suggested Labs and Follow-Through
 
-- **[Lab 4: Index Tuning and Pruning](../labs/lab-04-index-tuning.md)** provides hands-on exercises for measuring performance impact.
+- **[Lab 4: Index Tuning and Pruning](../labs/lab-04-index-tuning.md)** provides hands on exercises for measuring performance impact.
 - **Benchmark exercise:** Write a concurrent benchmark script that runs the hot queries at 20 concurrent connections for 5 minutes. Record p50, p90 and p99 latencies.
 - **Cardinality analysis exercise:** For each GROUP BY query, calculate the theoretical cardinality. Identify any queries where the cardinality exceeds 100,000.
 - **Resource contention exercise:** Run two concurrent benchmark workloads against the same table and measure how the slow query affects the hot queries.

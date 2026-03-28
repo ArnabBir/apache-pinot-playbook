@@ -428,7 +428,7 @@ The following files in this repository are directly relevant to the concepts dis
 * [`schemas/trip_events.schema.json`](schemas/trip_events.schema.json) and [`schemas/trip_state.schema.json`](schemas/trip_state.schema.json) demonstrate schema definitions that reference time columns for segment pruning.
 * [`tables/trip_events_rt.table.json`](tables/trip_events_rt.table.json) and [`tables/trip_state_rt.table.json`](tables/trip_state_rt.table.json) show table configurations with tenant assignments and retention settings.
 * [`tables/merchants_dim_offline.table.json`](tables/merchants_dim_offline.table.json) provides an example of an offline table config with sorted column and star-tree indexing.
-* [`labs/lab-04-index-tuning.md`](labs/lab-04-index-tuning.md) provides hands-on experience with segment pruning and index tuning.
+* [`labs/lab-04-index-tuning.md`](labs/lab-04-index-tuning.md) provides hands on experience with segment pruning and index tuning.
 
 ## Further Reading and Resources
 

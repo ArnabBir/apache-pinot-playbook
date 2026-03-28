@@ -584,13 +584,13 @@ Alternatively, we could explore:
 
 ## Suggested Labs
 
-[Lab 6: Multi-Stage Queries](../labs/lab-06-multi stage-queries.md) provides hands-on exercises with JOINs, window functions and EXPLAIN PLAN analysis using the MSE.
+[Lab 6: Multi-Stage Queries](../labs/lab-06-multi stage-queries.md) provides hands on exercises with JOINs, window functions and EXPLAIN PLAN analysis using the MSE.
 
 ## Repository Artifacts
 
 The following files in this repository are directly relevant to the concepts discussed in this chapter:
 
-[`sql/04_multistage_join.sql`](sql/04_multistage_join.sql) provides a JOIN query enriching trip data with merchant attributes. [`sql/05_multistage_windows.sql`](sql/05_multistage_windows.sql) provides window function examples with ranking and period-over-period analysis. [`schemas/merchants_dim.schema.json`](schemas/merchants_dim.schema.json) defines the dimension table schema used for JOIN examples. `tables/merchants_dim.table.json` shows the dimension table configuration with `isDimTable: true`. [`app/main.py`](app/main.py) provides API endpoints that use MSE for enrichment queries. [`labs/lab-06-multi-stage-queries.md`](labs/lab-06-multi-stage-queries.md) provides hands-on exercises with MSE queries.
+[`sql/04_multistage_join.sql`](sql/04_multistage_join.sql) provides a JOIN query enriching trip data with merchant attributes. [`sql/05_multistage_windows.sql`](sql/05_multistage_windows.sql) provides window function examples with ranking and period-over-period analysis. [`schemas/merchants_dim.schema.json`](schemas/merchants_dim.schema.json) defines the dimension table schema used for JOIN examples. `tables/merchants_dim.table.json` shows the dimension table configuration with `isDimTable: true`. [`app/main.py`](app/main.py) provides API endpoints that use MSE for enrichment queries. [`labs/lab-06-multi-stage-queries.md`](labs/lab-06-multi-stage-queries.md) provides hands on exercises with MSE queries.
 
 
 ## Further Reading and Resources

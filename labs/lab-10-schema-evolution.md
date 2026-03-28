@@ -6,7 +6,7 @@ A Pinot schema is not a static contract. Production systems evolve: new attribut
 
 Pinot's approach to schema evolution is deliberately conservative. The Controller validates every schema change against the current state of the table before applying it. Some changes are safe by construction and can be applied immediately. Others require careful orchestration: the schema must be updated first, existing segments must be reloaded so that all servers serve the new column definition and new events must arrive before the column is populated. A third class of changes is rejected outright because no in-place migration path exists — the only resolution is a full re-ingestion.
 
-This lab builds the judgment to distinguish these three categories and gives you hands-on practice with each. You will add a backward-compatible column, observe its null behavior in existing segments, trigger a segment reload and then deliberately attempt a breaking change to understand what the Controller rejects and why.
+This lab builds the judgment to distinguish these three categories and gives you hands on practice with each. You will add a backward-compatible column, observe its null behavior in existing segments, trigger a segment reload and then deliberately attempt a breaking change to understand what the Controller rejects and why.
 
 > [!NOTE]
 > Lab 3 must be complete and data must be present in `trip_events` before starting. The schema evolution steps in this lab modify the live `trip_events` schema. Work through every step in sequence — each step depends on the state left by the previous one.

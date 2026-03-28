@@ -1,6 +1,6 @@
 # Labs
 
-Twenty-one hands-on labs organized across five progressive phases. Each lab builds directly on the previous phase. Every lab contains a conceptual diagram that makes the mental model visible before any commands run, a challenge section that asks you to design or predict before the answer is revealed, a measurement tracking table so improvements are quantified rather than assumed and four reflection prompts that demand reasoning rather than recall.
+Twenty-one hands on labs organized across five progressive phases. Each lab builds directly on the previous phase. Every lab contains a conceptual diagram that makes the mental model visible before any commands run, a challenge section that asks you to design or predict before the answer is revealed, a measurement tracking table so improvements are quantified rather than assumed and four reflection prompts that demand reasoning rather than recall.
 
 See the [Suggested Learning Paths](#suggested-learning-paths) table to navigate by goal rather than sequence.
 
@@ -80,7 +80,7 @@ These labs apply Pinot skills to new problem domains, demonstrating that the sam
 | Deep mastery - full course | All 21 labs in phase order |
 
 
-## What Makes These Labs Hands-On
+## What Makes These Labs Hands On
 
 | Element | What It Forces |
 |---------|---------------|

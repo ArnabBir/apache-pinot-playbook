@@ -382,12 +382,12 @@ Not every analytical question is a time series. Ad-hoc exploratory analysis and 
 
 ## Suggested Labs
 
-[Lab 7: Time Series and Metrics](../labs/lab-07-time series.md) provides hands-on exercises comparing SQL and time series query approaches, configuring time series endpoints and integrating with a Grafana dashboard.
+[Lab 7: Time Series and Metrics](../labs/lab-07-time series.md) provides hands on exercises comparing SQL and time series query approaches, configuring time series endpoints and integrating with a Grafana dashboard.
 
 
 ## Repository Artifacts
 
-The following files in this repository are directly relevant to the concepts discussed in this chapter. [`sql/06_timeseries_gmv.sql`](sql/06_timeseries_gmv.sql) provides the SQL equivalent of a time series GMV query. [`sql/timeseries_gmv_request.json`](sql/timeseries_gmv_request.json) provides a sample time series engine request payload. [`app/main.py`](app/main.py) provides API endpoints that demonstrate both SQL and time series access patterns. `labs/lab-07-time series.md` provides hands-on exercises with the Time Series Engine.
+The following files in this repository are directly relevant to the concepts discussed in this chapter. [`sql/06_timeseries_gmv.sql`](sql/06_timeseries_gmv.sql) provides the SQL equivalent of a time series GMV query. [`sql/timeseries_gmv_request.json`](sql/timeseries_gmv_request.json) provides a sample time series engine request payload. [`app/main.py`](app/main.py) provides API endpoints that demonstrate both SQL and time series access patterns. `labs/lab-07-time series.md` provides hands on exercises with the Time Series Engine.
 
 
 ## Further Reading and Resources

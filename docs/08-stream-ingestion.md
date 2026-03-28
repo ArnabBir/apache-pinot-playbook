@@ -567,7 +567,7 @@ The following files in this repository are directly relevant to the concepts dis
 | [`tables/trip_events_rt.table.json`](tables/trip_events_rt.table.json) | Shows a REALTIME table configuration with stream ingestion settings |
 | [`schemas/trip_state.schema.json`](schemas/trip_state.schema.json) | Demonstrates an upsert-enabled stream table schema |
 | [`tables/trip_state_rt.table.json`](tables/trip_state_rt.table.json) | Demonstrates an upsert-enabled stream table configuration |
-| [`labs/lab-03-stream-ingestion.md`](labs/lab-03-stream-ingestion.md) | Provides hands-on experience with stream ingestion configuration and monitoring |
+| [`labs/lab-03-stream-ingestion.md`](labs/lab-03-stream-ingestion.md) | Provides hands on experience with stream ingestion configuration and monitoring |
 
 ## Further Reading and Resources
 

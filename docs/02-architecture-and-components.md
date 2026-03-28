@@ -597,7 +597,7 @@ The following files in this repository are directly relevant to the concepts dis
 * [`docker-compose.yml`](docker-compose.yml) defines the complete local Pinot cluster including controllers, brokers, servers and ZooKeeper.
 * [`schemas/trip_events.schema.json`](schemas/trip_events.schema.json) and [`schemas/trip_state.schema.json`](schemas/trip_state.schema.json) demonstrate schema definitions managed by the controller.
 * [`tables/trip_events_rt.table.json`](tables/trip_events_rt.table.json) and [`tables/trip_state_rt.table.json`](tables/trip_state_rt.table.json) show table configurations that the controller processes.
-* [`labs/lab-01-local-cluster.md`](labs/lab-01-local-cluster.md) provides hands-on experience with all Pinot components.
+* [`labs/lab-01-local-cluster.md`](labs/lab-01-local-cluster.md) provides hands on experience with all Pinot components.
 
 ## Further Reading and Resources
 
