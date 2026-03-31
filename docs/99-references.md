@@ -7,40 +7,32 @@ This repository is designed to complement, not replace, the official Apache Pino
 
 These are the canonical starting points for any Pinot practitioner.
 
-**Pinot documentation home:** [https://docs.pinot.apache.org/](https://docs.pinot.apache.org/) is the primary reference for configuration options, SQL syntax, ingestion specs and operational guidance.
-
-**Apache Pinot GitHub repository:** [https://github.com/apache/pinot](https://github.com/apache/pinot) contains the source code, issue tracker and contributor discussions. Reading the source is often the fastest way to resolve ambiguity in behavior.
-
-**Apache Pinot releases:** [https://github.com/apache/pinot/releases](https://github.com/apache/pinot/releases) is where you will find changelogs, migration notes and new feature announcements with every release.
-
-**Pinot Slack community:** The Apache Pinot Slack workspace is the most active place for real time Q&A. You can join through the link on the official docs site. The `#general`, `#troubleshooting` and `#dev` channels are particularly useful.
-
-**Pinot mailing lists:** The traditional Apache communication channel. Subscribe to `dev@pinot.apache.org` for development discussions and `users@pinot.apache.org` for usage questions. Archives are available at [https://lists.apache.org/](https://lists.apache.org/).
-
-**Apache Pinot Wiki:** [https://cwiki.apache.org/confluence/display/PINOT](https://cwiki.apache.org/confluence/display/PINOT) contains design documents, Pinot Enhancement Proposals (PEPs) and roadmap discussions.
+| Resource | Description |
+| :--- | :--- |
+| [Pinot Documentation](https://docs.pinot.apache.org/) | Primary reference for configuration options, SQL syntax, ingestion specs and operational guidance. |
+| [Apache Pinot GitHub](https://github.com/apache/pinot) | Source code, issue tracker and contributor discussions. Reading the source is often the fastest way to resolve behavioral ambiguity. |
+| [Release Notes](https://github.com/apache/pinot/releases) | Changelogs, migration notes and new feature announcements for every release. |
+| [Pinot Slack Community](https://docs.pinot.apache.org/) | The most active place for real-time Q&A. The `#general`, `#troubleshooting` and `#dev` channels are particularly useful. |
+| [Mailing Lists](https://lists.apache.org/) | Subscribe to `dev@pinot.apache.org` for development discussions and `users@pinot.apache.org` for usage questions. |
+| [Apache Pinot Wiki](https://cwiki.apache.org/confluence/display/PINOT) | Design documents, Pinot Enhancement Proposals (PEPs) and roadmap discussions. |
 
 
 ## YouTube Videos and Talks
 
-Video content is one of the best ways to absorb architectural intuition and see Pinot in action. The following talks cover a range of depth from introductory overviews to advanced internals.
+Video content is one of the best ways to absorb architectural intuition and see Pinot in action.
 
-1. **Apache Pinot: Realtime Distributed OLAP Datastore** - [https://www.youtube.com/watch?v=T70jnJzS2Ks](https://www.youtube.com/watch?v=T70jnJzS2Ks). A broad walkthrough of Pinot's architecture, use cases and positioning in the real time analytics landscape. Excellent starting point for newcomers.
+| Talk | Description |
+| :--- | :--- |
+| [Apache Pinot: Realtime Distributed OLAP Datastore](https://www.youtube.com/watch?v=T70jnJzS2Ks) | Broad walkthrough of Pinot's architecture, use cases and positioning. Excellent starting point for newcomers. |
+| [StarTree Technical Content](https://www.youtube.com/watch?v=JV0WxBwJqKE) | Practical considerations around deploying and tuning Pinot, with emphasis on production patterns from the StarTree team. |
+| Real-Time Analytics at LinkedIn Using Apache Pinot | LinkedIn engineers walk through the evolution of Pinot from its origins to serving thousands of queries per second at planet scale. |
+| Building Real-Time Analytics at Uber with Apache Pinot | Uber's data platform team explains how Pinot powers rider and driver analytics, surge pricing dashboards and operational metrics. |
+| Apache Pinot Deep Dive: Multi-Stage Query Engine | Technical deep dive into the V2 multi-stage query engine covering distributed joins, resource management and query planning. |
+| Indexing Strategies in Apache Pinot | Detailed exploration of inverted indexes, range indexes, sorted indexes and star-tree indexes with workload-based selection guidance. |
+| Apache Pinot: Upsert and Dedup at Scale | Architecture of Pinot's upsert and deduplication features including comparison key management and metadata overhead. |
+| Stream Ingestion with Apache Pinot and Kafka | Demonstrates realtime consumption from Kafka topics covering consumer configuration, offset management and exactly-once semantics. |
 
-2. **StarTree Technical Content** - [https://www.youtube.com/watch?v=JV0WxBwJqKE](https://www.youtube.com/watch?v=JV0WxBwJqKE). Covers practical considerations around deploying and tuning Pinot, with emphasis on production patterns from the StarTree team.
-
-3. **Real-Time Analytics at LinkedIn Using Apache Pinot.** LinkedIn engineers walk through the evolution of Pinot from its origins as an internal tool to a planet-scale analytics engine serving thousands of queries per second.
-
-4. **Building Real-Time Analytics at Uber with Apache Pinot.** Uber's data platform team explains how they use Pinot for rider and driver analytics, surge pricing dashboards and operational metrics.
-
-5. **Apache Pinot Deep Dive: Multi-Stage Query Engine.** A technical deep dive into the V2 multi stage query engine, covering distributed joins, resource management and query planning.
-
-6. **Indexing Strategies in Apache Pinot.** Detailed exploration of inverted indexes, range indexes, sorted indexes, star-tree indexes and how to choose the right index for your workload.
-
-7. **Apache Pinot: Upsert and Dedup at Scale.** Walks through the architecture of Pinot's upsert and deduplication features, including comparison key management and metadata overhead.
-
-8. **Stream Ingestion with Apache Pinot and Kafka.** Demonstrates how Pinot consumes from Kafka topics in real time, covering consumer configuration, offset management and exactly-once semantics.
-
-For the latest talks, search "Apache Pinot" on YouTube and filter by upload date. The StarTree YouTube channel also publishes regular content.
+For the latest talks, search "Apache Pinot" on YouTube and filter by upload date. The StarTree YouTube channel publishes regular content.
 
 
 ## Blog Posts and Articles
@@ -49,36 +41,42 @@ Written deep dives are invaluable for understanding design decisions and real-wo
 
 ### StarTree Blog
 
-The StarTree blog at [https://startree.ai/blog](https://startree.ai/blog) is the richest single source of Pinot-focused content. Notable articles include the following.
+The StarTree blog at [https://startree.ai/blog](https://startree.ai/blog) is the richest single source of Pinot-focused content. Notable articles include:
 
-**Understanding Star-Tree Index in Apache Pinot** explains the pre-aggregation data structure that gives Pinot its sub second latency on high cardinality dimensions. **Upsert in Apache Pinot: How It Works** covers the internals of comparison-based upsert, partial upsert and the trade-offs with memory and segment management. The **Indexing Deep Dive Series** is a multi-part series covering inverted indexes, range indexes, bloom filters, text indexes with Lucene, JSON indexes and timestamp indexes. **Performance Tuning Apache Pinot** provides practical guidance on segment sizing, query optimization and resource allocation. **Real-Time Analytics Architecture Patterns** explores Lambda vs. Kappa architectures and where Pinot fits in each.
+- **Understanding Star-Tree Index in Apache Pinot**. The pre-aggregation data structure that gives Pinot sub-second latency on high-cardinality dimensions.
+- **Upsert in Apache Pinot: How It Works**. Internals of comparison-based upsert, partial upsert and the trade-offs with memory and segment management.
+- **Indexing Deep Dive Series**. Multi-part series covering inverted indexes, range indexes, bloom filters, text indexes, JSON indexes and timestamp indexes.
+- **Performance Tuning Apache Pinot**. Practical guidance on segment sizing, query optimization and resource allocation.
+- **Real-Time Analytics Architecture Patterns** Lambda vs. Kappa architectures and where Pinot fits in each.
 
 ### LinkedIn Engineering Blog
 
-**Pinot: Realtime OLAP for 530 Million+ Users** is the foundational blog post describing why LinkedIn built Pinot and how it serves Who Viewed My Profile, ad analytics and content analytics at massive scale. **Building LinkedIn's Real-Time Activity Tracking Platform** describes the activity tracking pipeline that feeds Pinot and the challenges of schema evolution at scale.
+- **Pinot: Realtime OLAP for 530 Million+ Users**. Foundational blog post describing why LinkedIn built Pinot and how it serves Who Viewed My Profile, ad analytics and content analytics at massive scale.
+- **Building LinkedIn's Real-Time Activity Tracking Platform**. The activity tracking pipeline that feeds Pinot and the challenges of schema evolution at scale.
 
 ### Uber Engineering Blog
 
-**Real-Time Analytics at Uber** covers the data platform architecture at Uber with emphasis on real time dashboards, marketplace analytics and the role Pinot plays alongside Kafka and HDFS. **Scaling Apache Pinot at Uber** discusses cluster management, multi-tenancy and operational lessons learned from running Pinot across multiple data centers.
+- **Real-Time Analytics at Uber** Uber's data platform architecture with emphasis on real-time dashboards, marketplace analytics and the role Pinot plays alongside Kafka and HDFS.
+- **Scaling Apache Pinot at Uber**. Cluster management, multi-tenancy and operational lessons from running Pinot across multiple data centers.
 
 ### Other Engineering Blogs
 
-Stripe Engineering has published content on real time fraud detection analytics, touching on OLAP systems and columnar stores relevant to Pinot workloads. Walmart Engineering has shared insights on real time inventory analytics that mirror the kinds of problems Pinot is designed to solve. WePay (Chase) has written about using Pinot for real time payment analytics and reconciliation dashboards.
+- **Stripe Engineering**. Real-time fraud detection analytics touching on OLAP systems and columnar stores relevant to Pinot workloads.
+- **Walmart Engineering**. Real-time inventory analytics that mirror the kinds of problems Pinot is designed to solve.
+- **WePay (Chase)**. Real-time payment analytics and reconciliation dashboards built on Pinot.
 
 
 ## Books and Long-Form Reading
 
-While there is no single book dedicated exclusively to Apache Pinot at the time of writing, the following titles provide essential background on the concepts, architectures and systems that underpin Pinot.
+While there is no single book dedicated exclusively to Apache Pinot, the following titles provide essential background on the concepts and systems that underpin it.
 
-**"Designing Data-Intensive Applications" by Martin Kleppmann** is the gold standard for understanding distributed systems, storage engines, stream processing and batch processing. Chapters on OLAP, column-oriented storage and stream processing are directly relevant.
-
-**"Streaming Systems" by Tyler Akidau, Slava Chernyak and Reuven Lax** covers watermarks, windowing, triggers and exactly-once processing. Essential reading for understanding how Pinot's real time ingestion layer interacts with streaming sources.
-
-**"The Data Warehouse Toolkit" by Ralph Kimball and Margy Ross** is the foundational text on dimensional modeling, star schemas and OLAP design. The mental models here translate directly to Pinot schema design and star-tree index configuration.
-
-**"Database Internals" by Alex Petrov** provides deep coverage of storage engines, B-trees, LSM trees, distributed consensus and replication. Helps you understand the storage and coordination layers that Pinot builds on.
-
-**"Fundamentals of Data Engineering" by Joe Reis and Matt Housley** is a modern survey of data engineering concepts including batch vs. stream processing, data modeling and analytics serving layers.
+| Book | Relevance to Pinot |
+| :--- | :--- |
+| **Designing Data-Intensive Applications** by Martin Kleppmann | The gold standard for understanding distributed systems, storage engines and stream processing. Chapters on OLAP and column-oriented storage are directly relevant. |
+| **Streaming Systems** by Tyler Akidau, Slava Chernyak and Reuven Lax | Covers watermarks, windowing, triggers and exactly-once processing. Essential for understanding Pinot's real-time ingestion layer. |
+| **The Data Warehouse Toolkit** by Ralph Kimball and Margy Ross | Foundational text on dimensional modeling and star schemas. Mental models here translate directly to Pinot schema design and star-tree index configuration. |
+| **Database Internals** by Alex Petrov | Deep coverage of storage engines, B-trees, LSM trees, distributed consensus and replication. Explains the storage and coordination layers that Pinot builds on. |
+| **Fundamentals of Data Engineering** by Joe Reis and Matt Housley | Modern survey of data engineering including batch vs. stream processing, data modeling and analytics serving layers. |
 
 
 ## Community and Ecosystem
@@ -87,15 +85,27 @@ Apache Pinot does not exist in isolation. Understanding the surrounding ecosyste
 
 ### Related Apache Projects
 
-**Apache Kafka** ([https://kafka.apache.org/](https://kafka.apache.org/)) is the most common streaming source for Pinot's real time tables. Understanding Kafka's partition model, consumer groups and offset management is critical. **Apache Helix** ([https://helix.apache.org/](https://helix.apache.org/)) is the cluster management and resource allocation framework that Pinot uses. Helix handles segment assignment, replica placement and state transitions. **Apache ZooKeeper** ([https://zookeeper.apache.org/](https://zookeeper.apache.org/)) is the coordination service underneath Helix. ZooKeeper stores cluster metadata, controller leader election state and segment assignment mappings.
+| Project | Role in a Pinot Architecture |
+| :--- | :--- |
+| [Apache Kafka](https://kafka.apache.org/) | The most common streaming source for Pinot's real-time tables. Understanding Kafka's partition model, consumer groups and offset management is critical. |
+| [Apache Helix](https://helix.apache.org/) | The cluster management framework Pinot uses for segment assignment, replica placement and state transitions. |
+| [Apache ZooKeeper](https://zookeeper.apache.org/) | The coordination service underneath Helix. Stores cluster metadata, controller leader election state and segment assignment mappings. |
 
 ### Comparison and Alternative Systems
 
-Understanding how Pinot compares to similar systems helps you make informed technology choices. **ClickHouse** ([https://clickhouse.com/](https://clickhouse.com/)) is a high-performance columnar OLAP database strong in batch analytics workloads with a rich SQL dialect. It differs from Pinot in its approach to real time ingestion and multi-tenancy. **Apache Druid** ([https://druid.apache.org/](https://druid.apache.org/)) is the system most architecturally similar to Pinot. Both support real time ingestion from Kafka, segment-based storage and sub second query latency. Druid uses a different query language (native JSON) alongside SQL. **Apache Doris** ([https://doris.apache.org/](https://doris.apache.org/)) is an MPP analytical database with MySQL protocol compatibility, growing rapidly in the Chinese engineering community with increasing global adoption.
+| System | Relationship to Pinot |
+| :--- | :--- |
+| [ClickHouse](https://clickhouse.com/) | High-performance columnar OLAP database strong in batch analytics with a rich SQL dialect. Differs from Pinot in its approach to real-time ingestion and multi-tenancy. |
+| [Apache Druid](https://druid.apache.org/) | The system most architecturally similar to Pinot. Both support real-time ingestion from Kafka, segment-based storage and sub-second query latency. Druid uses a native JSON query language alongside SQL. |
+| [Apache Doris](https://doris.apache.org/) | MPP analytical database with MySQL protocol compatibility, growing rapidly with increasing global adoption. |
 
 ### Tools That Integrate with Pinot
 
-**Apache Superset** ([https://superset.apache.org/](https://superset.apache.org/)) is the open-source business intelligence platform with native Pinot connector support and is the most popular visualization layer for Pinot. **Grafana** ([https://grafana.com/](https://grafana.com/)) is a monitoring and observability platform that can connect to Pinot through its generic SQL data source or via a community plugin. **Presto / Trino** ([https://trino.io/](https://trino.io/)) are distributed SQL query engines that can query Pinot as a catalog, enabling federated queries across Pinot and other data sources like Hive or Iceberg.
+| Tool | Integration Point |
+| :--- | :--- |
+| [Apache Superset](https://superset.apache.org/) | Open-source BI platform with native Pinot connector support and the most popular visualization layer for Pinot deployments. |
+| [Grafana](https://grafana.com/) | Monitoring and observability platform that connects to Pinot through its generic SQL data source or via a community plugin. |
+| [Presto / Trino](https://trino.io/) | Distributed SQL query engines that can query Pinot as a catalog, enabling federated queries across Pinot and other sources like Hive or Iceberg. |
 
 
 ## Per-Chapter Cross-References
@@ -130,38 +140,29 @@ Each chapter in the Apache Pinot playbook maps to specific areas of the official
 
 ## Repository Cross-Reference
 
-This section maps the directory structure of the Apache Pinot playbook repository to the concepts covered in each chapter. Use it as a quick navigation aid.
+This section maps the directory structure of the Apache Pinot playbook repository to the concepts covered in each chapter.
 
-[`docker-compose.yml`](docker-compose.yml) provides the local development stack. It brings up ZooKeeper, a Pinot controller, broker, server and optionally Kafka. Referenced heavily in Chapters 02, 08, 14 and 21.
-
-The `contracts/` directory contains data contracts in OpenAPI, AsyncAPI and JSON Schema formats. These contracts define the interfaces between producers and consumers of Pinot data. Referenced in Chapter 13.
-
-The `schemas/` directory holds Pinot schema configuration files. Each file defines dimension fields, metric fields and date-time fields for a specific table. Referenced in Chapters 04 and 05.
-
-The `tables/` directory contains Pinot table configuration files. These define table type (OFFLINE, REALTIME, HYBRID), indexing configuration, routing strategy and ingestion settings. Referenced in Chapters 05, 06, 07, 08 and 09.
-
-The `sql/` directory houses SQL query packs organized by topic. These are ready-to-run queries that demonstrate features covered in Chapters 10, 11 and 12.
-
-The `src/pinot_playbook_demo/` directory is the Python package that accompanies the book. It includes utility code for data generation, Pinot client wrappers and helper scripts used throughout the labs.
-
-The `labs/` directory contains hands on lab exercises with step by step instructions. Each lab is self-contained and maps to one or more chapters. The capstone lab in Chapter 21 ties everything together.
-
-The `jobs/` directory stores batch ingestion job specifications. These are the YAML and JSON files that define segment generation and push tasks for offline tables. Referenced in Chapter 07.
+| Path | Description | Referenced In |
+| :--- | :--- | :--- |
+| [`docker-compose.yml`](docker-compose.yml) | Local development stack: ZooKeeper, Pinot controller, broker, server and optionally Kafka. | Chapters 02, 08, 14, 21 |
+| `contracts/` | Data contracts in OpenAPI, AsyncAPI and JSON Schema formats defining producer-consumer interfaces. | Chapter 13 |
+| `schemas/` | Pinot schema configuration files defining dimension, metric and date-time fields. | Chapters 04, 05 |
+| `tables/` | Pinot table configuration files defining type (OFFLINE, REALTIME, HYBRID), indexing and ingestion settings. | Chapters 05, 06, 07, 08, 09 |
+| `sql/` | SQL query packs organized by topic, ready to run against the demo stack. | Chapters 10, 11, 12 |
+| `src/pinot_playbook_demo/` | Python package with utility code for data generation, Pinot client wrappers and helper scripts. | Throughout labs |
+| `labs/` | Hands-on lab exercises with step-by-step instructions, each mapping to one or more chapters. | Chapter 21, Exercises |
+| `jobs/` | Batch ingestion job specifications (YAML and JSON) for offline table segment generation. | Chapter 07 |
 
 
 ## How to Stay Current
 
 Apache Pinot is an actively developed project with a fast-moving release cadence. The following practices are the most effective ways to keep up.
 
-Watch the GitHub repository by starring and watching [https://github.com/apache/pinot](https://github.com/apache/pinot) to receive notifications about new releases, major pull requests and design discussions.
-
-Join the Slack community for real-time conversations with committers, contributors and fellow practitioners. This is the fastest path to answers when you hit an unexpected behavior.
-
-Subscribe to the dev mailing list, where major design decisions and Pinot Enhancement Proposals are discussed before implementation begins.
-
-Follow the StarTree blog and YouTube channel. StarTree, the company founded by Pinot's original creators, publishes the most consistent stream of Pinot-focused technical content.
-
-Attend Apache Pinot meetups and conferences. Community meetups happen regularly in major tech hubs and online. Check the Pinot website and Slack for announcements.
+- **Watch the GitHub repository** by starring and watching [https://github.com/apache/pinot](https://github.com/apache/pinot) to receive notifications about new releases, major pull requests and design discussions.
+- **Join the Slack community** for real-time conversations with committers, contributors and fellow practitioners. This is the fastest path to answers when you hit unexpected behavior.
+- **Subscribe to the dev mailing list** where major design decisions and Pinot Enhancement Proposals are discussed before implementation begins.
+- **Follow the StarTree blog and YouTube channel.** StarTree, the company founded by Pinot's original creators, publishes the most consistent stream of Pinot-focused technical content.
+- **Attend Apache Pinot meetups and conferences.** Community meetups happen regularly in major tech hubs and online. Check the Pinot website and Slack for announcements.
 
 
 *This reference chapter will be updated as new resources become available. If you find a resource that belongs here, open an issue or pull request on the repository.*

@@ -42,6 +42,15 @@ flowchart TB
 
 The following workload patterns align with Pinot's architectural strengths. Teams building systems that match these patterns should consider Pinot as a primary candidate for their analytical serving layer.
 
+| Pattern | Core Requirement | Why Pinot Fits |
+| :--- | :--- | :--- |
+| **Operational Dashboards** | Sub-second aggregations on fresh event data | Realtime ingestion, star-tree indexes and columnar storage serve these queries natively |
+| **Customer-Facing Embedded Analytics** | Sub-100ms latency at millions-of-users scale | Scatter-gather with segment pruning enables low tail latency under high concurrency |
+| **Streaming Experimentation Metrics** | Experiment results visible within minutes of assignment | Realtime ingestion with flexible GROUP BY supports variant-sliced metric queries |
+| **Fraud and Anomaly Detection** | Complex filters on recent events at interactive speed | Inverted indexes and time pruning enable fast multi-dimensional scans |
+| **Marketplace State Monitoring** | Latest-state serving combined with trend aggregations | Upsert tables and append-only tables can serve both access patterns from a single cluster |
+| **Ad-Tech and Clickstream Analytics** | Millions of events per second with dimensional roll-ups | Star-tree indexes and append-only tables with partition pruning handle this at scale |
+
 ### Pattern 1: Operational Dashboards
 
 Real-time dashboards used by operations teams to monitor business performance, detect anomalies and make operational decisions are one of Pinot's strongest use cases. Examples include ride-sharing operations centers, e-commerce order monitoring, logistics tracking and financial transaction monitoring. These dashboards require fresh data (within seconds of event occurrence), low query latency (sub second page loads) and support for aggregation queries (counts, sums, averages by dimension). Pinot's realtime ingestion, columnar storage and aggregation-optimized indexes are designed for exactly this workload.
@@ -88,6 +97,14 @@ High-volume event analytics for advertising platforms, web analytics and user be
 ## Anti-Patterns: When Pinot Is the Wrong Choice
 
 Recognizing anti-patterns is just as important as recognizing good fits. The following patterns indicate that Pinot is likely the wrong tool and forcing it into these roles will create ongoing operational pain.
+
+| Anti-Pattern | The Mismatch | Better Tool |
+| :--- | :--- | :--- |
+| **Transactional Source of Truth** | ACID semantics, row-level locking and strong consistency | PostgreSQL, CockroachDB or Spanner |
+| **Deeply Normalized Schema** | Expecting fast multi-table join performance | Snowflake, BigQuery or Redshift |
+| **Uncontrolled Ad-Hoc Exploration** | Arbitrary queries from analysts without constraints | Trino, Spark SQL or the data warehouse |
+| **Long-Horizon Back-Office Analytics** | Multi-year scans for regulatory reports | Data lakehouse or warehouse for cold history |
+| **Tuning Based on Anecdote** | Copying config from blog posts without measuring | Any system needs measurement-driven tuning |
 
 ### Anti-Pattern 1: Transactional Source of Truth
 
@@ -227,11 +244,11 @@ When evaluating Pinot against alternative technologies, the comparison should fo
 
 For teams evaluating whether Pinot is appropriate for a new workload, a quick screening test can save weeks of investigation.
 
-Pinot is a strong fit when all three of the following conditions hold: the workload requires fresh analytical data with seconds to minutes of latency from event to query, queries must be answered with sub second to low-second response times and the system must sustain hundreds to thousands of queries per second concurrently.
-
-Caution is warranted when the primary need is any of the following: transactional semantics (ACID, locking, foreign keys), deep normalization with complex multi-table joins, heavyweight ETL or transformation in the serving layer, unconstrained warehouse-style exploration by many users or full-text search as the primary query pattern.
-
-Further investigation is recommended when the workload matches Pinot's strengths but the team has no experience with columnar analytics databases, when the query patterns are not yet well-defined or when the data volume is very small (under 1 million rows) where a simpler solution might suffice.
+| Verdict | Conditions |
+| :--- | :--- |
+| **Strong fit** | Fresh analytical data with seconds to minutes of latency from event to query **and** sub-second to low-second query response times **and** hundreds to thousands of queries per second concurrently |
+| **Proceed with caution** | Primary need is transactional semantics (ACID, locking or foreign keys), deep normalization with complex multi-table joins, heavyweight ETL in the serving layer, unconstrained warehouse-style exploration or full-text search as the primary query pattern |
+| **Investigate further** | Workload matches Pinot's strengths but the team has no columnar analytics experience, query patterns are not yet well-defined or data volume is under 1 million rows where a simpler solution might suffice |
 
 
 ## Design Review Checklist
@@ -283,28 +300,24 @@ Use this checklist during design reviews when a team proposes adding a new table
 
 ## Operating Heuristics
 
-Choose Pinot because the workload fits, not because the system is fashionable. Technology choices should be driven by workload requirements, not by conference talks, blog posts or "everyone is using it" reasoning.
-
-Keep Pinot in a broader architecture where each layer has a clear job. Pinot is the analytical serving layer. It should not also be the transactional store, the data warehouse, the search engine and the ML feature store.
-
-Use explicit design review checklists before scaling a Pinot program. A checklist prevents teams from deploying tables that are poorly designed, inadequately monitored or mismatched with the workload.
-
-Revisit the fit assessment as the workload evolves. A workload that was a good fit for Pinot when it had 10 queries and 3 consumers may outgrow Pinot's strengths as it evolves to 100 queries and 50 consumers with diverse requirements.
-
-Pair Pinot with a warehouse for the workloads that do not fit. Instead of stretching Pinot to cover ad-hoc exploration and long-horizon reporting, use a warehouse for those workloads and let Pinot focus on what it does best.
+| Heuristic | Rationale |
+| :--- | :--- |
+| **Choose Pinot because the workload fits** | Technology choices should be driven by workload requirements, not by conference talks, blog posts or "everyone is using it" reasoning. |
+| **Keep each layer of the architecture focused on a single job** | Pinot is the analytical serving layer. It should not also be the transactional store, the data warehouse, the search engine or the ML feature store. |
+| **Use explicit design review checklists before scaling** | A checklist prevents teams from deploying tables that are poorly designed, inadequately monitored or mismatched with the workload. |
+| **Revisit the fit assessment as the workload evolves** | A workload that was a good fit at 10 queries and 3 consumers may outgrow Pinot's strengths as it evolves to 100 queries and 50 consumers with diverse requirements. |
+| **Pair Pinot with a warehouse for workloads that do not fit** | Instead of stretching Pinot to cover ad-hoc exploration and long-horizon reporting, use a warehouse for those workloads and let Pinot focus on what it does best. |
 
 
 ## Common Pitfalls
 
-Starting from the tool and reverse-fitting the workload is a common failure mode. Teams that decide "we will use Pinot" before understanding their workload requirements often end up building complex workarounds for limitations that would not exist with a different tool choice.
-
-Ignoring the cost of weak contracts and weak governance allows technical debt to accumulate. Without data contracts, schema change reviews and ownership models, a Pinot deployment gradually becomes unreliable.
-
-Letting all consumers share the same cluster semantics creates noisy-neighbor problems. Different consumers have different latency requirements, query patterns and reliability needs. Treating them all the same leads to situations where one consumer degrades the experience for all others.
-
-Comparing Pinot to tools that solve different problems produces misleading conclusions. Comparing Pinot's join performance to PostgreSQL's is like comparing an airplane's fuel efficiency to a car's. They are designed for different use cases.
-
-Deploying Pinot without a clear exit strategy leaves the team without options if the workload turns out to be a poor fit. Evaluate portability before committing and know how to migrate data and queries to an alternative system if needed.
+| Pitfall | Consequence |
+| :--- | :--- |
+| **Starting from the tool and reverse-fitting the workload** | Teams that commit to Pinot before understanding their requirements often build complex workarounds for limitations that would not exist with a different tool choice. |
+| **Ignoring the cost of weak contracts and governance** | Without data contracts, schema change reviews and ownership models, a Pinot deployment gradually becomes unreliable as implicit assumptions accumulate. |
+| **Letting all consumers share the same cluster semantics** | Different consumers have different latency requirements and query patterns. Treating them identically creates noisy-neighbor degradation that affects everyone. |
+| **Comparing Pinot to tools that solve fundamentally different problems** | Comparing Pinot's join performance to PostgreSQL's is a category error. Each system is optimized for a different access pattern and workload profile. |
+| **Deploying Pinot without a clear migration path** | Evaluate portability before committing. Know how to move data and queries to an alternative system if the workload turns out to be a poor fit. |
 
 
 ## Practice Prompts
@@ -319,25 +332,28 @@ Deploying Pinot without a clear exit strategy leaves the team without options if
 
 ## Suggested Labs and Follow-Through
 
-The [Capstone Chapter](../docs/21-capstone-building-a-rides-platform.md) demonstrates how the patterns and decision framework described here are applied to a complete rides and commerce analytics platform.
-
-The fit assessment exercise involves choosing three workloads from your organization (or three hypothetical workloads), applying the rapid fit test and decision checklist to each and presenting the findings to the team.
-
-The architecture pairing exercise involves designing a data architecture for an e-commerce platform that uses Pinot for real time analytics and a data warehouse for long-horizon reporting. Draw the data flow diagram, identify the boundary between the two systems and describe how queries are routed.
-
-The anti-pattern identification exercise involves reviewing an existing Pinot deployment (or a proposed one) and identifying any anti-patterns from the list in this chapter. For each anti-pattern found, propose a specific remediation.
+- **[Capstone Chapter](../docs/21-capstone-building-a-rides-platform.md)** demonstrates how the patterns and decision framework described here are applied to a complete rides and commerce analytics platform.
+- **Fit assessment exercise:** Choose three workloads from your organization or three hypothetical workloads, apply the rapid fit test and decision checklist to each and present the findings to the team.
+- **Architecture pairing exercise:** Design a data architecture for an e-commerce platform that uses Pinot for real time analytics and a data warehouse for long-horizon reporting. Draw the data flow diagram, identify the boundary between the two systems and describe how queries are routed.
+- **Anti-pattern identification exercise:** Review an existing Pinot deployment and identify any anti-patterns from the list in this chapter. For each anti-pattern found, propose a specific remediation.
 
 
 ## Repository Artifacts
 
-The following files in this repository are relevant to the patterns and decision framework.
-
-[`docs/21-capstone-building-a-rides-platform.md`](docs/21-capstone-building-a-rides-platform.md) demonstrates a complete application of these patterns in a concrete architecture. The `sql/` directory contains query examples that illustrate the query patterns Pinot handles well. The `tables/` directory contains table configurations that demonstrate the modeling patterns described here. The `contracts/` directory contains the data contracts that enforce the governance patterns recommended in this chapter.
+- [`docs/21-capstone-building-a-rides-platform.md`](docs/21-capstone-building-a-rides-platform.md) demonstrates a complete application of these patterns in a concrete architecture.
+- The `sql/` directory contains query examples that illustrate the query patterns Pinot handles well.
+- The `tables/` directory contains table configurations that demonstrate the modeling patterns described in this chapter.
+- The `contracts/` directory contains the data contracts that enforce the governance patterns recommended in this chapter.
 
 
 ## Further Reading and Resources
 
-[Apache Pinot Use Cases](https://docs.pinot.apache.org/basics/use-cases) describes the official use cases that Pinot is designed for, with architecture examples. [Apache Pinot vs. Druid vs. ClickHouse (YouTube)](https://www.youtube.com/watch?v=T70jnJzS2Ks) provides a comparative analysis of real time analytics systems with strengths and trade-offs for each. [When to Use Apache Pinot (YouTube)](https://www.youtube.com/watch?v=JV0WxBwJqKE) discusses workload fit criteria and anti-patterns with examples from production deployments. [StarTree Blog: Pinot Architecture Patterns](https://startree.ai/blog) includes articles on architecture pairings, workload fit assessment and real-world deployment patterns. [LinkedIn Engineering: Real-Time Analytics with Pinot](https://engineering.linkedin.com/blog) describes LinkedIn's architecture for real time analytics, including how Pinot fits into their broader data ecosystem. [Martin Kleppmann, "Designing Data-Intensive Applications"](https://dataintensive.net/) provides foundational guidance on choosing the right data systems for different workload requirements.
+- [Apache Pinot Use Cases](https://docs.pinot.apache.org/basics/use-cases) covers the official use cases Pinot is designed for, with architecture examples for common real-time analytical workloads.
+- [Apache Pinot vs. Druid vs. ClickHouse (YouTube)](https://www.youtube.com/watch?v=T70jnJzS2Ks) presents a comparative analysis of real-time analytics systems with strengths and trade-offs for each.
+- [When to Use Apache Pinot (YouTube)](https://www.youtube.com/watch?v=JV0WxBwJqKE) examines workload fit criteria and anti-patterns with examples from production deployments.
+- [StarTree Blog: Pinot Architecture Patterns](https://startree.ai/blog) collects articles on architecture pairings, workload fit assessment and real-world deployment patterns.
+- [LinkedIn Engineering: Real-Time Analytics with Pinot](https://engineering.linkedin.com/blog) explains LinkedIn's architecture for real-time analytics and how Pinot fits into their broader data ecosystem.
+- [Martin Kleppmann, "Designing Data-Intensive Applications"](https://dataintensive.net/) offers foundational guidance on choosing the right data systems for different workload requirements.
 
 *Previous chapter: [19. Failure Modes and Troubleshooting](./19-failure-modes-and-troubleshooting.md)
 

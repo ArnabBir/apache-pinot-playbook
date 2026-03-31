@@ -192,7 +192,14 @@ flowchart TB
 
 **Step 4: Check server resource utilization.**
 
-If pruning and data shape look normal, the problem may be resource contention on the servers. CPU saturation arises when too many concurrent queries or a single expensive query consumes all CPU cores. Memory pressure occurs when large GROUP BY result sets, upsert primary key maps or excessive segment count consume heap memory. Disk I/O contention emerges when segment loading, compaction or rebalancing consumes disk bandwidth. Long garbage collection pauses can also cause latency spikes that resemble other performance problems.
+If pruning and data shape look normal, the problem may be resource contention on the servers.
+
+| Contention Type | Root Cause |
+| :--- | :--- |
+| **CPU saturation** | Too many concurrent queries or a single expensive query consuming all available CPU cores |
+| **Memory pressure** | Large `GROUP BY` result sets, upsert primary key maps or excessive segment count consuming heap |
+| **Disk I/O contention** | Segment loading, compaction or rebalancing consuming disk bandwidth while queries are running |
+| **GC pauses** | Long garbage collection pauses that produce latency spikes resembling query slowness |
 
 **Step 5: Check for concurrent operations.**
 
@@ -475,32 +482,26 @@ Steps taken to resolve the incident.
 
 ## Operating Heuristics
 
-Classify the symptom before changing anything. Resist the urge to start toggling settings. Identify which failure family the symptom belongs to, then follow the diagnostic path for that family.
-
-Prefer hypothesis-driven debugging over random toggles. Formulate a hypothesis ("I believe the latency regression is caused by a pruning change"), identify the diagnostic signal that would confirm or refute it and then check.
-
-Turn every meaningful incident into a durable repo artifact. If the incident was worth waking someone up for, it is worth writing down what happened and how to prevent it from happening again.
-
-Keep the troubleshooting decision tree visible. Print it, post it on the team wiki or add it to the on-call handbook. It should be the first thing a responder sees when paged.
-
-Debug upsert problems from the producer side first. Most upsert issues originate in the producer's key assignment ordering or delete marker logic, not in Pinot's upsert engine.
-
-Check the simple things first. Before investigating complex distributed systems issues, verify that the table exists, the query syntax is correct, the servers are running and there is actually data in the table.
+| Heuristic | Practice |
+| :--- | :--- |
+| **Classify before changing anything** | Resist the urge to start toggling settings. Identify which failure family the symptom belongs to and then follow the diagnostic path for that family. |
+| **Prefer hypothesis-driven debugging** | Formulate a specific hypothesis, identify the diagnostic signal that would confirm or refute it and then check that signal before making any changes. |
+| **Turn every meaningful incident into a durable artifact** | If the incident was worth waking someone up for, it is worth documenting the diagnosis, resolution and prevention steps in the repository. |
+| **Keep the decision tree visible** | Post the troubleshooting decision tree on the team wiki or in the on-call handbook. It should be the first reference a responder consults when paged. |
+| **Debug upsert problems from the producer side first** | Most upsert issues originate in producer key assignment, Kafka partitioning or delete marker logic rather than in Pinot's upsert engine itself. |
+| **Check the simple things first** | Before investigating complex distributed systems issues, verify that the table exists, the query syntax is correct and the servers are running. |
 
 
 ## Common Pitfalls
 
-Debugging upsert problems from the query layer alone is insufficient. Upsert correctness depends on producer key assignment, Kafka partitioning, comparison column values and delete marker semantics. Queries can only reveal symptoms, not causes.
-
-Changing indexes or quotas before verifying routing and segment shape wastes effort. If the broker is scanning 10x more segments than expected, no index change will compensate for the wasted work.
-
-Calling an incident solved without updating runbooks or tests guarantees recurrence. An incident that produces no durable artifacts will happen again and next time the person who resolved it may not be available.
-
-Assuming the problem is in Pinot when it might be upstream leads investigations astray. Stale data is frequently caused by producer failures, Kafka topic issues or network problems between components. Verify the data pipeline end-to-end before diving into Pinot internals.
-
-Ignoring the BrokerResponse metadata leaves valuable diagnostic information on the table. The BrokerResponse contains rich diagnostic information (segments queried, docs scanned, execution time, exceptions). Always examine it when troubleshooting query issues.
-
-Conflating correlation with causation produces false conclusions. "We deployed a config change and latency increased" does not prove the config change caused the latency increase. It might be a coincidence with a separate workload change, a data volume spike or a server hardware issue.
+| Pitfall | Why It Matters |
+| :--- | :--- |
+| **Debugging upsert from the query layer alone** | Upsert correctness depends on producer key assignment, Kafka partitioning, comparison column values and delete marker semantics. Queries reveal symptoms but not root causes. |
+| **Changing indexes before verifying routing** | If the broker is scanning 10x more segments than expected, no index change will compensate for that wasted work. Verify pruning first. |
+| **Declaring an incident resolved without updating runbooks** | An incident that produces no durable artifacts will recur. The person who resolved it may not be available next time. |
+| **Assuming the problem is in Pinot when it might be upstream** | Stale data is frequently caused by producer failures, Kafka topic issues or network problems between components. Verify the full pipeline before diving into Pinot internals. |
+| **Ignoring the BrokerResponse metadata** | The response contains rich diagnostic information including segments queried, docs scanned, execution time and exception details. Always examine it when troubleshooting query issues. |
+| **Conflating correlation with causation** | A config change followed by a latency increase does not prove the change caused the problem. Investigate alternative explanations before declaring a root cause. |
 
 
 ## Practice Prompts
@@ -515,27 +516,29 @@ Conflating correlation with causation produces false conclusions. "We deployed a
 
 ## Suggested Labs and Follow-Through
 
-[Lab 8: SLO and Incident Drill](../labs/lab-08-slo-incident.md) provides a structured incident simulation exercise.
-
-The stale data simulation exercise involves stopping the Kafka producer while the demo stack is running. Observe how the freshness metric changes over time, then restart the producer and measure the recovery time.
-
-The upsert debugging exercise involves intentionally producing out of order messages to the `trip-state` topic. Use the diagnostic queries from this chapter to identify the affected entities and explain why the upsert result is incorrect.
-
-The timeout analysis exercise involves setting the broker timeout to 1 second and running a complex GROUP BY query. Examine the BrokerResponse error message, then increase the timeout and compare the successful execution time to understand the timeout margin.
-
-The post-incident artifact exercise involves choosing one of the failure scenarios described in this chapter. Write a complete post-incident review document following the template provided, including at least two concrete action items.
+- **[Lab 8: SLO and Incident Drill](../labs/lab-08-slo-incident.md)** provides a structured incident simulation exercise with defined triage steps and recovery procedures.
+- **Stale data simulation:** Stop the Kafka producer while the demo stack is running. Observe how the freshness metric degrades over time. Restart the producer and measure the recovery duration.
+- **Upsert debugging exercise:** Intentionally produce out-of-order messages to the `trip-state` topic. Use the diagnostic queries from this chapter to identify the affected entities and explain why the upsert result is incorrect.
+- **Timeout analysis exercise:** Set the broker timeout to 1 second and run a complex GROUP BY query. Examine the BrokerResponse error message. Increase the timeout and compare the successful execution time to understand the margin.
+- **Post-incident artifact exercise:** Choose one failure scenario from this chapter and write a complete post-incident review document using the template provided, including at least two concrete action items.
 
 
 ## Repository Artifacts
 
-The following files in this repository support troubleshooting workflows.
-
-[`sql/07_upsert_debug.sql`](sql/07_upsert_debug.sql) contains diagnostic queries for investigating upsert state issues. [`sql/08_segment_pruning.sql`](sql/08_segment_pruning.sql) contains queries designed to verify segment pruning behavior. [`scripts/simulate_upsert.py`](scripts/simulate_upsert.py) simulates upsert processing to help understand state reconciliation. [`scripts/setup_pinot.py`](scripts/setup_pinot.py) provides a reference for validating cluster setup and configuration.
+- [`sql/07_upsert_debug.sql`](sql/07_upsert_debug.sql) contains diagnostic queries for investigating upsert state issues.
+- [`sql/08_segment_pruning.sql`](sql/08_segment_pruning.sql) contains queries designed to verify segment pruning behavior.
+- [`scripts/simulate_upsert.py`](scripts/simulate_upsert.py) simulates upsert processing to help understand state reconciliation.
+- [`scripts/setup_pinot.py`](scripts/setup_pinot.py) provides a reference for validating cluster setup and configuration.
 
 
 ## Further Reading and Resources
 
-[Apache Pinot Troubleshooting Guide](https://docs.pinot.apache.org/operators/operating-pinot/troubleshooting) provides the official troubleshooting documentation with component-specific diagnostic steps. [Apache Pinot FAQ](https://docs.pinot.apache.org/basics/getting-started/faq) addresses common questions and error messages encountered during development and production. [Debugging Apache Pinot Queries (YouTube)](https://www.youtube.com/watch?v=T70jnJzS2Ks) walks through query troubleshooting with live examples, including examining BrokerResponse metadata and diagnosing pruning issues. [Apache Pinot Upsert Deep Dive (YouTube)](https://www.youtube.com/watch?v=JV0WxBwJqKE) covers upsert mechanics, failure modes and debugging techniques. [StarTree Blog: Troubleshooting Common Pinot Issues](https://startree.ai/blog) includes articles on diagnosing specific failure patterns encountered by StarTree customers. [Google SRE Book: Effective Troubleshooting](https://sre.google/sre-book/effective-troubleshooting/) provides foundational guidance on structured troubleshooting methodology that applies to any distributed system.
+- [Apache Pinot Troubleshooting Guide](https://docs.pinot.apache.org/operators/operating-pinot/troubleshooting) provides the official troubleshooting documentation with component-specific diagnostic steps.
+- [Apache Pinot FAQ](https://docs.pinot.apache.org/basics/getting-started/faq) addresses common questions and error messages encountered during development and production.
+- [Debugging Apache Pinot Queries (YouTube)](https://www.youtube.com/watch?v=T70jnJzS2Ks) walks through query troubleshooting with live examples including examining BrokerResponse metadata and diagnosing pruning issues.
+- [Apache Pinot Upsert Deep Dive (YouTube)](https://www.youtube.com/watch?v=JV0WxBwJqKE) covers upsert mechanics, failure modes and debugging techniques.
+- [StarTree Blog: Troubleshooting Common Pinot Issues](https://startree.ai/blog) includes articles on diagnosing specific failure patterns encountered by StarTree customers.
+- [Google SRE Book: Effective Troubleshooting](https://sre.google/sre-book/effective-troubleshooting/) provides foundational guidance on structured troubleshooting methodology that applies to any distributed system.
 
 *Previous chapter: [18. Observability, Operations and Minions](./18-observability-operations-and-minions.md)
 

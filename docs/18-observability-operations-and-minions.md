@@ -6,7 +6,14 @@ The success of an Apache Pinot deployment is not measured by its initial uptime.
 
 ### The Core Operational Questions
 
-A mature Pinot operations practice must be able to answer five fundamental questions at any moment. Is the data that users are querying sufficiently current? Are consuming segments keeping pace with the stream? Are queries returning results within the defined SLA? Is there sufficient CPU and memory for the next quarter of growth? Did the last configuration change improve or degrade performance? Are background tasks completing successfully without disrupting query serving?
+A mature Pinot operations practice must be able to answer six fundamental questions at any moment:
+
+1. Is the data that users are querying sufficiently current?
+2. Are consuming segments keeping pace with the stream?
+3. Are queries returning results within the defined SLA?
+4. Is there sufficient CPU and memory for the next quarter of growth?
+5. Did the last configuration change improve or degrade performance?
+6. Are background tasks completing successfully without disrupting query serving?
 
 
 ## The Three Pillars of Pinot Health
@@ -51,7 +58,13 @@ flowchart TB
 
 For real-time workloads, freshness is as important as latency. A perfectly fast query over stale data is still a failure from the user's perspective. If the operational dashboard shows trip counts from 15 minutes ago while the actual count has changed dramatically, the dashboard is misleading operators into making decisions based on obsolete information.
 
-Freshness monitoring involves tracking the lag between event publication and query visibility. Ingestion lag is the time difference between when a message is published to Kafka and when it becomes visible in Pinot query results. This includes the time the message spends in the Kafka consumer buffer, the time it takes to be written to the consuming segment and the time for the segment to be committed and made available to the broker. Consuming segment lag is the offset difference between the latest message in the Kafka partition and the latest message consumed by the Pinot server. This metric is available through Pinot's built-in metrics and through Kafka consumer group monitoring. Segment seal cadence measures how frequently consuming segments are sealed and converted to completed segments. Irregular seal cadence may indicate that flush thresholds are misconfigured or that ingestion is stalled.
+Freshness monitoring involves tracking the lag between event publication and query visibility across three dimensions:
+
+| Signal | Definition |
+| :--- | :--- |
+| **Ingestion lag** | Time between message publication to Kafka and visibility in Pinot query results. Includes time in the Kafka consumer buffer, time to be written to the consuming segment and time for the segment to commit and become available to the broker. |
+| **Consuming segment lag** | Offset difference between the latest message in a Kafka partition and the latest message consumed by the Pinot server. Available through Pinot's built-in JMX metrics and Kafka consumer group monitoring. |
+| **Segment seal cadence** | Frequency at which consuming segments are sealed and converted to completed segments. Irregular cadence may indicate misconfigured flush thresholds or stalled ingestion. |
 
 | Metric | Source | What It Tells You |
 |--------|--------|-------------------|
@@ -90,7 +103,7 @@ Query health encompasses latency, error rate, timeouts, resource consumption and
 > [!IMPORTANT]
 > Separating broker symptoms from server symptoms is critical. When query latency increases, operators need to determine whether the problem is on the broker side (merge phase, network, routing) or the server side (segment scanning, index access, resource contention). Maintaining separate dashboards for broker and server metrics enables faster triage.
 
-A broker-side latency increase with stable server-side latency suggests a merge-phase bottleneck, network congestion or broker resource exhaustion. A server-side latency increase with stable broker-side overhead suggests a scanning problem. Missing index, pruning regression or data skew.
+A broker-side latency increase with stable server-side latency suggests a merge-phase bottleneck, network congestion or broker resource exhaustion. A server-side latency increase with stable broker-side overhead suggests a scanning problem caused by a missing index, a pruning regression or data skew.
 
 ### Axis 3: Maintenance Activity
 
@@ -135,13 +148,30 @@ JAVA_OPTS="$JAVA_OPTS -javaagent:/opt/jmx_exporter/jmx_prometheus_javaagent.jar=
 
 A well-designed Pinot Grafana dashboard should have four separate panel groups, each aligned to a specific observability concern.
 
-The **freshness panel** tracks Kafka consumer lag by partition, consuming segment count versus expected count, latest event timestamp versus current time and ingestion rate in rows per second.
+**Freshness panel**
+- Kafka consumer lag by partition
+- Consuming segment count versus expected count
+- Latest event timestamp versus current time
+- Ingestion rate in rows per second
 
-The **query health panel** shows query latency percentiles (p50, p90, p99) over time, query throughput in QPS, error rate and timeout rate and segments scanned per query to detect pruning regressions.
+**Query health panel**
+- Query latency percentiles (p50, p90, p99) over time
+- Query throughput in QPS
+- Error rate and timeout rate
+- Segments scanned per query to detect pruning regressions
 
-The **maintenance panel** displays active Minion tasks and their status, segment count per table over time, deep store upload and download rate and retention enforcement activity.
+**Maintenance panel**
+- Active Minion tasks and their status
+- Segment count per table over time
+- Deep store upload and download rate
+- Retention enforcement activity
 
-The **resource panel** covers CPU utilization per component, heap memory usage and GC activity, off-heap memory (direct memory and memory-mapped files), disk usage per server and network I/O between components.
+**Resource panel**
+- CPU utilization per component
+- Heap memory usage and GC activity
+- Off-heap memory (direct memory and memory-mapped files)
+- Disk usage per server
+- Network I/O between components
 
 ### Health Check Endpoints
 
@@ -347,7 +377,12 @@ curl -s "http://localhost:9000/tasks/MergeRollupTask/taskstates" | python -m jso
 
 ### Monitoring Minion Tasks
 
-Minion tasks should be monitored like any other production process. Track the task completion rate (what percentage of scheduled tasks complete successfully), task duration (how long tasks take, increasing duration may indicate growing data volumes or resource contention), task failure rate (what percentage of tasks fail, failures may indicate deep store connectivity issues, insufficient memory or data corruption) and resource consumption (how much CPU, memory and network bandwidth Minion tasks consume, which affects capacity planning).
+Minion tasks should be monitored like any other production process. Track:
+
+- **Task completion rate**. What percentage of scheduled tasks complete successfully
+- **Task duration**. How long tasks take; increasing duration may indicate growing data volumes or resource contention
+- **Task failure rate**. What percentage of tasks fail; failures may indicate deep store connectivity issues, insufficient memory or data corruption
+- **Resource consumption**. How much CPU, memory and network bandwidth Minion tasks consume, which directly affects capacity planning
 
 ```bash
 # List recent task executions
@@ -362,7 +397,12 @@ curl -s "http://localhost:9000/tasks/task/MergeRollupTask_trip_events_REALTIME_1
 > [!IMPORTANT]
 > Minion instances need sufficient resources to process segments efficiently without starving the query serving path.
 
-Minion tasks are CPU-intensive during segment processing (sorting, indexing, compression). Allocate at least 4 cores per Minion instance. Minion loads segments into memory during processing, so allocate heap memory proportional to the largest segment size plus overhead, with a starting point of 8 to 16 GB of heap. Minion downloads segments from and uploads segments to the deep store, requiring sufficient network bandwidth between Minion instances and the deep store. Run Minion instances on separate nodes from Pinot servers to prevent resource contention between maintenance tasks and query serving.
+| Resource | Guidance |
+| :--- | :--- |
+| **CPU** | Minion tasks are CPU-intensive during segment processing (sorting, indexing, compression). Allocate at least 4 cores per Minion instance. |
+| **Heap memory** | Minion loads segments into memory during processing. Allocate heap proportional to the largest segment size plus overhead, with a starting point of 8 to 16 GB. |
+| **Network bandwidth** | Minion downloads segments from and uploads results to the deep store. Ensure sufficient bandwidth between Minion instances and the deep store. |
+| **Node isolation** | Run Minion instances on separate nodes from Pinot servers to prevent resource contention between maintenance tasks and query serving. |
 
 
 ## Runbooks
@@ -432,7 +472,12 @@ Effective alerting distinguishes between conditions that require immediate human
 
 ## Alert Design Principles
 
-Alerts should be designed to maximize signal and minimize noise. Alert on user-facing symptoms rather than infrastructure indicators. An alert for "query error rate exceeds 1 percent" is more actionable than "server CPU exceeds 90 percent." Every alert must include the affected table, the current metric value, the defined threshold and a link to the relevant runbook. Suppress duplicate notifications by grouping identical conditions into a single alert with a count to prevent on-call fatigue. Set thresholds based on observed historical data rather than arbitrary constants. If p99 latency typically fluctuates between 50ms and 100ms, a warning threshold of 200ms is appropriate.
+| Principle | Detail |
+| :--- | :--- |
+| **Alert on symptoms, not indicators** | An alert for "query error rate exceeds 1 percent" is more actionable than "server CPU exceeds 90 percent." User-facing symptoms drive faster, more targeted responses. |
+| **Include context in every alert** | Every alert must include the affected table, the current metric value, the defined threshold and a link to the relevant runbook. Alerts without context slow down incident response. |
+| **Suppress duplicates** | Group identical conditions into a single alert with a count to prevent on-call fatigue. Noise trains responders to ignore alerts. |
+| **Set thresholds from observed data** | Base thresholds on historical measurements rather than arbitrary constants. If p99 latency typically fluctuates between 50ms and 100ms, a warning threshold of 200ms is appropriate. |
 
 ## Operating Heuristics
 
@@ -446,7 +491,12 @@ Alerts should be designed to maximize signal and minimize noise. Alert on user-f
 
 ## Common Pitfalls
 
-Focusing solely on infrastructure metrics like CPU while ignoring freshness misses the primary signal for real-time user experience. Treating Minion tasks as hidden noise rather than monitoring them allows unmonitored compaction or merge tasks to cause unexplained performance degradation. Keeping operational procedures in individual minds rather than in versioned repository documentation creates knowledge silos that break during personnel changes or incidents. Running Minion tasks on the same instances as Pinot servers causes resource contention that degrades query latency.
+| Pitfall | Consequence |
+| :--- | :--- |
+| **Monitoring only CPU while ignoring freshness** | Infrastructure metrics alone miss the primary signal for real-time user experience. A perfectly fast query over stale data is still a failure. |
+| **Treating Minion tasks as hidden background noise** | Unmonitored compaction or merge tasks cause unexplained performance degradation that is difficult to trace after the fact. |
+| **Keeping operational procedures in individual minds** | Undocumented tribal knowledge creates knowledge silos that collapse during personnel changes or production incidents. |
+| **Running Minion tasks on the same instances as servers** | Resource contention degrades query latency. Minion processing is CPU and I/O intensive and competes directly with query serving under load. |
 
 
 ## Practice Prompts

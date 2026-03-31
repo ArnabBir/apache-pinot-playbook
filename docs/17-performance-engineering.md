@@ -106,9 +106,18 @@ For each hot query, verify that the necessary indexes exist:
 
 High-cardinality GROUP BY operations are one of the most common sources of Pinot performance problems. When a query groups by a column with millions of distinct values, each server must maintain a hash map with millions of entries.
 
-Warning signs of cardinality problems include GROUP BY on a user ID or transaction ID column (these columns typically have cardinality in the millions), multiple GROUP BY columns whose combined cardinality is explosive (grouping by `city, merchant_id, hour` might produce 10,000 groups while grouping by `city, merchant_id, minute, product_id` might produce 10 million groups) and missing LIMIT on GROUP BY queries (without a LIMIT, the broker must merge all groups).
+Warning signs of cardinality problems:
 
-Strategies for managing cardinality include adding precomputed helper columns (instead of computing `DATE_TRUNC('HOUR', event_time)` at query time, add an `event_hour` column during ingestion), using HAVING to filter small groups (adding `HAVING COUNT(*) > 10` eliminates noise groups), considering star-tree indexes for queries that repeatedly compute the same aggregation pattern and evaluating whether denormalization can reduce joins by embedding a name directly into the fact table.
+- `GROUP BY` on a user ID or transaction ID column (cardinality in the millions)
+- Multiple `GROUP BY` columns whose combined cardinality is explosive. For example, grouping by `city, merchant_id, hour` might produce 10,000 groups while `city, merchant_id, minute, product_id` could produce 10 million.
+- Missing `LIMIT` on `GROUP BY` queries, which forces the broker to merge all groups.
+
+Strategies for managing cardinality:
+
+- Add precomputed helper columns at ingestion time. Instead of computing `DATE_TRUNC('HOUR', event_time)` at query time, add an `event_hour` column during ingestion.
+- Use `HAVING` to filter noise groups. `HAVING COUNT(*) > 10` eliminates small groups before they reach the broker merge phase.
+- Consider star-tree indexes for queries that repeatedly compute the same aggregation pattern.
+- Evaluate whether denormalization can eliminate joins by embedding a dimension attribute directly into the fact table.
 
 ### Step 5: Measure Under Realistic Concurrency
 
@@ -283,7 +292,9 @@ During segment creation, Pinot builds a tree structure where each node represent
 
 ### Star-Tree Limitations
 
-Only pre-configured aggregation patterns benefit from star-tree acceleration. A query that groups by a dimension not in the star-tree will fall back to raw data scanning. Adding new dimensions requires rebuilding segments: if the hot query pattern changes, segments must be reloaded. Star-tree does not help with selection queries that retrieve individual rows.
+- Only pre-configured aggregation patterns benefit from star-tree acceleration. Queries grouping by a dimension not in the star-tree fall back to raw data scanning.
+- Adding new dimensions requires rebuilding segments. When the hot query pattern changes, segments must be reloaded to reflect the updated star-tree configuration.
+- Star-tree does not help with selection queries that retrieve individual rows.
 
 
 ## Benchmarking Methodology
@@ -292,7 +303,14 @@ Effective benchmarking requires discipline. A benchmark that does not simulate r
 
 ### Benchmarking Checklist
 
-Before running a benchmark, confirm that the benchmark data matches production data in volume and distribution, that the queries used are the actual hot queries rather than synthetic ones, that the benchmark queries have been run once to warm the page cache before measuring, that queries run at the expected concurrency level, that the benchmark runs long enough to observe steady-state behavior and that the environment is controlled without production traffic present.
+Before running a benchmark, confirm:
+
+- Benchmark data matches production data in volume and distribution
+- Queries used are the actual hot queries rather than synthetic ones
+- Benchmark queries have been run once to warm the page cache before measuring
+- Queries run at the expected concurrency level
+- The benchmark runs long enough to observe steady-state behavior
+- The environment is controlled without production traffic present
 
 ### What to Measure
 
@@ -322,25 +340,13 @@ This discipline prevents "optimization theater" where changes are declared succe
 
 Understanding what not to do is as valuable as understanding what to do.
 
-### Anti-Pattern: Index Everything
-
-Adding indexes to every column is tempting but counterproductive. Each index increases segment size, ingestion time and memory usage. Index only the columns that appear in hot query predicates.
-
-### Anti-Pattern: Benchmark on a Quiet Laptop
-
-Running a single query on a development laptop with 100 rows provides no useful information about production performance. Benchmark with production-scale data, production-representative queries and production-level concurrency.
-
-### Anti-Pattern: Optimize Before Profiling
-
-Changing configuration parameters without first measuring the current performance is a common waste of engineering time. Always measure first and use the BrokerResponse metadata to identify the bottleneck before making changes.
-
-### Anti-Pattern: Ignore the Merge Phase
-
-Teams often focus on server-side execution time and ignore the broker-side merge phase. Monitor broker-side merge time. If merge time is significant, consider reducing result cardinality or using star-tree indexes.
-
-### Anti-Pattern: Unbounded Queries from BI Tools
-
-Connecting a BI tool directly to the Pinot broker and allowing arbitrary queries is a recipe for problems. Place an analytics API between the BI tool and Pinot so the API can enforce query constraints.
+| Anti-Pattern | Why It Fails |
+| :--- | :--- |
+| **Index Everything** | Each additional index increases segment size, ingestion time and memory usage. Index only the columns that appear in hot query predicates, verified by profiling. |
+| **Benchmark on a Quiet Laptop** | A single query on a development machine with 100 rows provides no useful information about production behavior. Benchmark with production-scale data, representative queries and production-level concurrency. |
+| **Optimize Before Profiling** | Changing configuration parameters without first measuring current performance is a common waste of engineering time. Always measure first and use the BrokerResponse metadata to identify the actual bottleneck before making changes. |
+| **Ignore the Merge Phase** | Teams often focus on server-side execution time and overlook the broker-side merge phase. If merge time is significant, consider reducing result cardinality or adding star-tree coverage. |
+| **Unbounded Queries from BI Tools** | Connecting a BI tool directly to the Pinot broker and allowing arbitrary queries is a recipe for runaway scans. Place an analytics API between the BI tool and Pinot to enforce query constraints before they reach the broker. |
 
 
 ## Performance Monitoring in Production
@@ -357,17 +363,36 @@ Performance engineering does not end after deployment. Production performance mo
 | Server CPU utilization | > 70% sustained | > 90% sustained |
 | GC pause duration | > 500ms | > 2000ms |
 
-Track broker query latency (p50, p90, p99) over time with dashboards. Monitor broker query rate because sudden spikes may indicate a misconfigured dashboard. Watch server segments scanned per query because an increase may indicate that pruning has stopped working. Monitor server CPU utilization since sustained high CPU leaves no headroom for query spikes. Track segment count per table because a rapidly growing count may indicate that flush thresholds are too aggressive. Monitor GC pause duration and frequency because long pauses cause direct latency spikes.
+- Track broker query latency (p50, p90, p99) over time with dashboards.
+- Monitor broker query rate because sudden spikes may indicate a misconfigured dashboard.
+- Watch server segments scanned per query because an increase may indicate that pruning has stopped working.
+- Monitor server CPU utilization since sustained high CPU leaves no headroom for query spikes.
+- Track segment count per table because a rapidly growing count may indicate that flush thresholds are too aggressive.
+- Monitor GC pause duration and frequency because long pauses cause direct latency spikes.
 
 
 ## Operating Heuristics
 
-Tune for the top queries that matter to the business, not for synthetic vanity benchmarks. A cluster optimized for a query nobody runs is optimized for nothing. Always compare optimization ideas against measured before-and-after evidence, because intuition about performance is frequently wrong. Use quotas and workload isolation as performance tools, not only as governance tools. Invest in star-tree indexes for stable, high-frequency aggregation patterns where the latency improvement is often 10x to 100x. Monitor performance continuously in production because performance characteristics change as data volumes grow. Keep benchmark scripts in the repository rather than in someone's scratch notebook. Benchmarks are infrastructure.
+| Heuristic | Rationale |
+| :--- | :--- |
+| **Tune for the queries that matter** | A cluster optimized for a query nobody runs is optimized for nothing. Target business-critical hot queries first and measure everything else against them. |
+| **Measure before and after every change** | Intuition about performance is frequently wrong. Document before-and-after evidence for every optimization attempt. |
+| **Use quotas and isolation as performance tools** | Quotas and workload isolation are not only governance mechanisms. They are first-class performance levers that prevent one consumer from degrading the experience for all others. |
+| **Invest in star-tree for stable aggregation patterns** | Latency improvements on matched patterns are often 10x to 100x. The trade-off is additional storage and ingestion overhead, which pays for itself on high-frequency workloads. |
+| **Monitor performance continuously in production** | Performance characteristics change as data volumes grow. What worked at 10 GB may not work at 10 TB and regressions go undetected until they become incidents. |
+| **Keep benchmark scripts in the repository** | Benchmarks are infrastructure, not scratch notes. Version-control them alongside the schemas and configurations they validate. |
 
 
 ## Common Pitfalls
 
-Benchmarking only single-query latency on a quiet cluster measures best-case performance, not production reality. Adding indexes without verifying they help the hot path creates pure overhead. Ignoring the difference between correctness success and performance success. A query that returns correct results in 30 seconds is functionally correct but operationally useless if the SLA requires sub-second latency. Tuning JVM parameters before understanding the workload leads into a deep rabbit hole of diminishing returns. Treating performance as a one-time project rather than an ongoing discipline means regressions go undetected until they become incidents. Copying configuration from blog posts without understanding the context is dangerous. A configuration that works for a 10-node cluster may not work for a 3-node cluster.
+| Pitfall | Why It Matters |
+| :--- | :--- |
+| **Single-query benchmarking on a quiet cluster** | Measures best-case performance, not production reality. Concurrency and steady-state behavior are the metrics that matter. |
+| **Adding indexes without verifying they help the hot path** | Indexes that do not serve hot predicates create pure overhead with no query benefit. |
+| **Confusing correctness with performance** | A query that returns correct results in 30 seconds is functionally correct but operationally useless when the SLA requires sub-second latency. |
+| **Tuning JVM parameters before understanding the workload** | JVM tuning is a deep rabbit hole of diminishing returns. Understand the workload pattern first, then tune. |
+| **Treating performance as a one-time project** | Regressions go undetected until they become incidents. Performance engineering requires continuous monitoring. |
+| **Copying configuration from blog posts without context** | A configuration optimized for a 10-node cluster may be counterproductive on a 3-node cluster with a different data shape. |
 
 
 ## Practice Prompts

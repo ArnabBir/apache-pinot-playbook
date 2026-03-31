@@ -414,43 +414,35 @@ The capstone architecture is a template, not a prescription. The same patterns a
 
 ## What This Capstone Teaches
 
-The capstone demonstrates several design principles that apply to any Pinot-centered analytical product.
+The capstone demonstrates design principles that apply to any Pinot-centered analytical product.
 
-Starting with contracts prevents schema drift, enables validation and makes changes visible in version control. Defining the data contracts before writing the first line of Pinot configuration is the single most impactful governance decision.
-
-Modeling for the hot queries means designing the schema, choosing indexes and configuring partitioning based on the actual queries that drive business value. Do not model for hypothetical queries.
-
-Separating facts and state when the use cases differ eliminates unnecessary complexity. An append-only event table and a latest-state upsert table serve fundamentally different analytical needs. Combining them into a single table creates complexity that cannot be easily optimized away.
-
-Keeping benchmarks and simulations close to configurations means that the scripts that benchmark queries and simulate behavior live in the same repository as the schemas and table configurations they validate. This proximity makes it easy to verify that configuration changes improve the intended outcomes.
-
-Operationalizing before scaling means that monitoring, alerting, runbooks and troubleshooting procedures should be in place before the system handles production traffic. Retrofitting operations after launch is always more disruptive than building them in from the start.
-
-Designing the product interface and the Pinot tables together means the API that consumers use and the Pinot tables that serve the data should be designed as a single coherent system, not as independent components that happen to be connected.
+- **Start with contracts.** Defining data contracts before writing the first line of Pinot configuration is the single most impactful governance decision. Contracts prevent schema drift, enable validation and make changes visible in version control.
+- **Model for the hot queries.** Design the schema, choose indexes and configure partitioning based on the actual queries that drive business value. Do not model for hypothetical queries.
+- **Separate facts and state when the use cases differ.** An append-only event table and a latest-state upsert table serve fundamentally different analytical needs. Combining them into a single table creates complexity that cannot be easily optimized away.
+- **Keep benchmarks and simulations close to configurations.** Scripts that benchmark queries and simulate behavior live in the same repository as the schemas they validate. This proximity makes it easy to verify that configuration changes improve the intended outcomes.
+- **Operationalize before scaling.** Monitoring, alerting, runbooks and troubleshooting procedures should be in place before the system handles production traffic. Retrofitting operations after launch is always more disruptive than building them in from the start.
+- **Design the product interface and the Pinot tables together.** The API that consumers use and the Pinot tables that serve the data should be designed as a single coherent system, not as independent components that happen to be connected.
 
 
 ## Operating Heuristics
 
-Use the capstone architecture as a template, not a law. Adapt the patterns to your domain, data volumes and organizational context. The three-table split, contract hierarchy and operational practices are portable. The specific schemas and queries are domain-specific.
-
-Keep event history and latest-state use cases separate when that clarifies serving semantics. Not every workload needs both tables. But when consumers ask both "what happened?" and "what is true right now?", the separation eliminates the complexity of computing latest state from a raw event stream at query time.
-
-Design the product interface and the Pinot tables together. The analytics API should not be an afterthought layered on top of raw Pinot access. It should be designed alongside the tables to enforce query constraints, manage access control and provide stable response schemas.
-
-Make the developer loop reproducible. If a new team member cannot get the platform running in under 30 minutes, the onboarding process has friction that will slow down the entire team over time.
+| Heuristic | Rationale |
+| :--- | :--- |
+| **Use the architecture as a template, not a law** | Adapt the three-table split, contract hierarchy and operational practices to your domain and data volumes. The specific schemas and queries are domain-specific. |
+| **Keep event history and latest-state separate when semantics differ** | When consumers ask both "what happened?" and "what is true right now?", the separation eliminates the complexity of computing latest state from a raw event stream at query time. |
+| **Design the product interface and the Pinot tables together** | The analytics API should not be an afterthought layered on top of raw Pinot access. Design it alongside the tables to enforce query constraints, manage access control and provide stable response schemas. |
+| **Make the developer loop reproducible** | If a new team member cannot get the platform running in under 30 minutes, the onboarding process has friction that will slow down the entire team over time. |
 
 
 ## Common Pitfalls
 
-Building a demo that works once, with no validation or repeatability, teaches nothing about production readiness. Every step should be scripted, validated and idempotent.
-
-Mixing every workload into one table because it seems simpler at first creates a table that is harder to optimize, harder to operate and harder to reason about than separate tables with clear responsibilities.
-
-Skipping contracts and then trying to retrofit them after teams depend on the data is expensive. Contracts are cheapest to introduce at the beginning. Once consumers depend on implicit assumptions about the data structure, any change becomes a coordination problem.
-
-Over-engineering the local demo creates maintenance burden without teaching production skills. The local development environment should be as simple as possible while remaining representative of production architecture.
-
-Treating the capstone as finished is the wrong mindset. The capstone is a starting point. It should evolve as the team learns more about their workload, discovers new query patterns and encounters production challenges that were not anticipated during initial design.
+| Pitfall | Consequence |
+| :--- | :--- |
+| **Building a demo that works once without repeatability** | Teaches nothing about production readiness. Every step should be scripted, validated and idempotent so that it can be reproduced from scratch. |
+| **Mixing all workloads into one table** | A combined table is harder to optimize, harder to operate and harder to reason about than separate tables with clear and focused responsibilities. |
+| **Skipping contracts then retrofitting them later** | Contracts are cheapest to introduce at the beginning. Once consumers depend on implicit assumptions about the data structure, any change becomes a coordination problem. |
+| **Over-engineering the local demo** | Excessive complexity in the development environment creates maintenance burden without teaching production skills. Keep it simple but representative. |
+| **Treating the capstone as finished** | The capstone is a starting point that should evolve as the team learns about their workload, discovers new query patterns and encounters challenges not anticipated during initial design. |
 
 
 ## Practice Prompts
@@ -465,17 +457,37 @@ Treating the capstone as finished is the wrong mindset. The capstone is a starti
 
 ## Suggested Labs and Follow-Through
 
-[Lab 1: Local Cluster](../labs/lab-01-local-cluster.md) provides the foundation for running the capstone stack locally. [Lab 2: Schemas and Tables](../labs/lab-02-schemas-and-tables.md) walks through creating the schemas and tables used in the capstone. [Lab 3: Stream Ingestion](../labs/lab-03-stream-ingestion.md) covers streaming data into the realtime tables. [Lab 4: Index Tuning and Pruning](../labs/lab-04-index-tuning.md) exercises the index configuration decisions made in the capstone. [Lab 5: Upsert and CDC](../labs/lab-05-upsert-cdc.md) explores the upsert semantics used in the `trip_state` table. [Lab 6: Multi-Stage Queries](../labs/lab-06-multi stage-queries.md) covers the JOIN and window function queries used in the BI consumer pattern. [Lab 7: Time Series and Metrics](../labs/lab-07-time-series.md) demonstrates time-series query patterns applicable to the capstone's monitoring needs. [Lab 8: SLO and Incident Drill](../labs/lab-08-slo-incident.md) exercises the operational practices that the capstone depends on in production.
+- **[Lab 1: Local Cluster](../labs/lab-01-local-cluster.md)** provides the foundation for running the capstone stack locally.
+- **[Lab 2: Schemas and Tables](../labs/lab-02-schemas-and-tables.md)** walks through creating the schemas and tables used in the capstone.
+- **[Lab 3: Stream Ingestion](../labs/lab-03-stream-ingestion.md)** covers streaming data into the realtime tables.
+- **[Lab 4: Index Tuning and Pruning](../labs/lab-04-index-tuning.md)** exercises the index configuration decisions made in the capstone.
+- **[Lab 5: Upsert and CDC](../labs/lab-05-upsert-cdc.md)** explores the upsert semantics used in the `trip_state` table.
+- **[Lab 6: Multi-Stage Queries](../labs/lab-06-multi%20stage-queries.md)** covers the JOIN and window function queries used in the BI consumer pattern.
+- **[Lab 7: Time Series and Metrics](../labs/lab-07-time-series.md)** demonstrates time-series query patterns applicable to the capstone's monitoring needs.
+- **[Lab 8: SLO and Incident Drill](../labs/lab-08-slo-incident.md)** exercises the operational practices that the capstone depends on in production.
 
 
 ## Repository Artifacts
 
-This capstone draws on every major artifact in the repository. [`docker-compose.yml`](docker-compose.yml) defines the complete local stack (ZooKeeper, Kafka, Pinot controller, broker, server and the demo API). The `schemas/` directory contains the Pinot schema definitions for all three tables. The `tables/` directory contains the annotated table configurations for all three tables. The `contracts/` directory contains the data contracts (JSON Schema for events, AsyncAPI for stream contracts, OpenAPI for the service API). The `sql/` directory contains the SQL query packs that exercise the platform's capabilities. [`app/main.py`](app/main.py) implements the FastAPI analytics service that sits between Pinot and application consumers. `src/pinot_playbook_demo/` contains the Python package with data generators, the Pinot client, the service layer and simulation utilities. The `scripts/` directory contains the operational scripts for bootstrapping, data streaming, benchmarking and validation. The `labs/` directory contains the hands on lab exercises that reinforce the concepts applied in this capstone.
+- [`docker-compose.yml`](docker-compose.yml) defines the complete local stack including ZooKeeper, Kafka, Pinot controller, broker, server and the demo API.
+- The `schemas/` directory contains the Pinot schema definitions for all three tables.
+- The `tables/` directory contains the annotated table configurations for all three tables.
+- The `contracts/` directory contains the data contracts in JSON Schema for events, AsyncAPI for stream contracts and OpenAPI for the service API.
+- The `sql/` directory contains the SQL query packs that exercise the platform's capabilities.
+- [`app/main.py`](app/main.py) implements the FastAPI analytics service that sits between Pinot and application consumers.
+- `src/pinot_playbook_demo/` contains the Python package with data generators, the Pinot client, the service layer and simulation utilities.
+- The `scripts/` directory contains the operational scripts for bootstrapping, data streaming, benchmarking and validation.
+- The `labs/` directory contains the hands-on lab exercises that reinforce the concepts applied in this capstone.
 
 
 ## Further Reading and Resources
 
-[Apache Pinot Getting Started](https://docs.pinot.apache.org/basics/getting-started) provides the official quickstart guide that complements the capstone's developer loop. [Apache Pinot Real-World Use Cases](https://docs.pinot.apache.org/basics/use-cases) describes production use cases that mirror the capstone's architecture patterns. [Building Real-Time Analytics with Apache Pinot (YouTube)](https://www.youtube.com/watch?v=T70jnJzS2Ks) walks through building a complete analytics platform from event streams to query serving. [Apache Pinot at Scale: Lessons from Production (YouTube)](https://www.youtube.com/watch?v=JV0WxBwJqKE) covers the productionization journey from a development prototype to a production grade deployment. [StarTree Blog: Real-Time Analytics Architecture Patterns](https://startree.ai/blog) includes case studies from companies that have built Pinot-centered analytics platforms similar to this capstone. [LinkedIn Engineering: Pinot-Powered Analytics](https://engineering.linkedin.com/blog) describes how LinkedIn uses the same architectural patterns (event tables, state tables, dimension tables, contract-driven governance) at massive scale.
+- [Apache Pinot Getting Started](https://docs.pinot.apache.org/basics/getting-started) provides the official quickstart guide that complements the capstone's developer loop.
+- [Apache Pinot Real-World Use Cases](https://docs.pinot.apache.org/basics/use-cases) describes production use cases that mirror the capstone's architecture patterns.
+- [Building Real-Time Analytics with Apache Pinot (YouTube)](https://www.youtube.com/watch?v=T70jnJzS2Ks) walks through building a complete analytics platform from event streams to query serving.
+- [Apache Pinot at Scale: Lessons from Production (YouTube)](https://www.youtube.com/watch?v=JV0WxBwJqKE) covers the productionization journey from a development prototype to a production-grade deployment.
+- [StarTree Blog: Real-Time Analytics Architecture Patterns](https://startree.ai/blog) includes case studies from companies that have built Pinot-centered analytics platforms similar to this capstone.
+- [LinkedIn Engineering: Pinot-Powered Analytics](https://engineering.linkedin.com/blog) describes how LinkedIn uses the same architectural patterns at massive scale.
 
 *Previous chapter: [20. Patterns, Anti-Patterns and Decision Framework](./20-patterns-antipatterns-and-decision-framework.md)
 
