@@ -27,8 +27,6 @@ jobs:
       - name: Configure Pages
         id: pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - name: Install MkDocs
         run: python -m pip install mkdocs-material
       - name: Build site
