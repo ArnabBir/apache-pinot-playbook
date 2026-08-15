@@ -1,0 +1,523 @@
+openapi: 3.1.0
+info:
+  title: Apache Pinot playbook Demo API
+  description: A small API that fronts the sample Pinot demo tables. In auto mode
+    it talks to Pinot when available and falls back to a deterministic in-memory provider
+    otherwise.
+  version: 0.1.0
+paths:
+  /health:
+    get:
+      tags:
+      - meta
+      summary: Health
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /api/v1/kpis:
+    get:
+      tags:
+      - analytics
+      summary: Get Kpis
+      operationId: get_kpis_api_v1_kpis_get
+      parameters:
+      - name: city
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: City
+      - name: window_minutes
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 10080
+          minimum: 1
+          default: 60
+          title: Window Minutes
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KPIResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/top-merchants:
+    get:
+      tags:
+      - analytics
+      summary: Top Merchants
+      operationId: top_merchants_api_v1_top_merchants_get
+      parameters:
+      - name: city
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: City
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 100
+          minimum: 1
+          default: 10
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MerchantStats'
+                title: Response Top Merchants Api V1 Top Merchants Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/trips/{trip_id}:
+    get:
+      tags:
+      - analytics
+      summary: Get Trip
+      operationId: get_trip_api_v1_trips__trip_id__get
+      parameters:
+      - name: trip_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Trip Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TripState'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/query/sql:
+    post:
+      tags:
+      - query
+      summary: Query Sql
+      operationId: query_sql_api_v1_query_sql_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SQLRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SQLResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/query/timeseries:
+    post:
+      tags:
+      - query
+      summary: Query Timeseries
+      operationId: query_timeseries_api_v1_query_timeseries_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimeSeriesRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeSeriesResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    City:
+      type: string
+      enum:
+      - bengaluru
+      - mumbai
+      - delhi
+      - hyderabad
+      - pune
+      - chennai
+      title: City
+    EventType:
+      type: string
+      enum:
+      - created
+      - accepted
+      - en_route
+      - picked_up
+      - completed
+      - cancelled
+      - deleted
+      title: EventType
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    HealthResponse:
+      properties:
+        mode:
+          type: string
+          title: Mode
+        pinot_available:
+          type: boolean
+          title: Pinot Available
+        generated_rows:
+          type: integer
+          title: Generated Rows
+      type: object
+      required:
+      - mode
+      - pinot_available
+      - generated_rows
+      title: HealthResponse
+    KPIResponse:
+      properties:
+        city:
+          anyOf:
+          - $ref: '#/components/schemas/City'
+          - type: 'null'
+        window_minutes:
+          type: integer
+          title: Window Minutes
+          default: 60
+        completed_trips:
+          type: integer
+          title: Completed Trips
+        cancelled_trips:
+          type: integer
+          title: Cancelled Trips
+        gross_merchandise_value:
+          type: number
+          title: Gross Merchandise Value
+        average_fare:
+          type: number
+          title: Average Fare
+        average_distance_km:
+          type: number
+          title: Average Distance Km
+        average_eta_seconds:
+          type: number
+          title: Average Eta Seconds
+      type: object
+      required:
+      - completed_trips
+      - cancelled_trips
+      - gross_merchandise_value
+      - average_fare
+      - average_distance_km
+      - average_eta_seconds
+      title: KPIResponse
+    MerchantStats:
+      properties:
+        merchant_id:
+          type: string
+          title: Merchant Id
+        merchant_name:
+          type: string
+          title: Merchant Name
+        city:
+          $ref: '#/components/schemas/City'
+        completed_trips:
+          type: integer
+          title: Completed Trips
+        revenue:
+          type: number
+          title: Revenue
+      type: object
+      required:
+      - merchant_id
+      - merchant_name
+      - city
+      - completed_trips
+      - revenue
+      title: MerchantStats
+    PaymentMethod:
+      type: string
+      enum:
+      - card
+      - wallet
+      - cash
+      - upi
+      title: PaymentMethod
+    SQLRequest:
+      properties:
+        query:
+          type: string
+          title: Query
+          description: SQL text to run against Pinot or the in-memory demo provider
+        query_type:
+          type: string
+          enum:
+          - v1
+          - multistage
+          title: Query Type
+          default: v1
+        query_options:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Query Options
+          description: Semicolon separated Pinot queryOptions string, e.g. useMultistageEngine=true;timeoutMs=15000
+      type: object
+      required:
+      - query
+      title: SQLRequest
+    SQLResponse:
+      properties:
+        mode:
+          type: string
+          title: Mode
+        query_type:
+          type: string
+          title: Query Type
+        query:
+          type: string
+          title: Query
+        result:
+          type: object
+          title: Result
+      type: object
+      required:
+      - mode
+      - query_type
+      - query
+      - result
+      title: SQLResponse
+    ServiceTier:
+      type: string
+      enum:
+      - economy
+      - premium
+      - xl
+      title: ServiceTier
+    TimeSeriesPoint:
+      properties:
+        bucket_start_ms:
+          type: integer
+          title: Bucket Start Ms
+        value:
+          type: number
+          title: Value
+      type: object
+      required:
+      - bucket_start_ms
+      - value
+      title: TimeSeriesPoint
+    TimeSeriesRequest:
+      properties:
+        metric:
+          type: string
+          enum:
+          - gross_merchandise_value
+          - completed_trips
+          - avg_eta_seconds
+          title: Metric
+          default: gross_merchandise_value
+        bucket_minutes:
+          type: integer
+          maximum: 1440.0
+          minimum: 1.0
+          title: Bucket Minutes
+          default: 60
+        city:
+          anyOf:
+          - $ref: '#/components/schemas/City'
+          - type: 'null'
+        window_hours:
+          type: integer
+          maximum: 720.0
+          minimum: 1.0
+          title: Window Hours
+          default: 24
+      type: object
+      title: TimeSeriesRequest
+    TimeSeriesResponse:
+      properties:
+        mode:
+          type: string
+          title: Mode
+        metric:
+          type: string
+          title: Metric
+        points:
+          items:
+            $ref: '#/components/schemas/TimeSeriesPoint'
+          type: array
+          title: Points
+      type: object
+      required:
+      - mode
+      - metric
+      - points
+      title: TimeSeriesResponse
+    TripState:
+      properties:
+        trip_id:
+          type: string
+          title: Trip Id
+        merchant_id:
+          type: string
+          title: Merchant Id
+        merchant_name:
+          type: string
+          title: Merchant Name
+        driver_id:
+          type: string
+          title: Driver Id
+        rider_id:
+          type: string
+          title: Rider Id
+        city:
+          $ref: '#/components/schemas/City'
+        service_tier:
+          $ref: '#/components/schemas/ServiceTier'
+        status:
+          type: string
+          title: Status
+        payment_method:
+          $ref: '#/components/schemas/PaymentMethod'
+        last_event_type:
+          $ref: '#/components/schemas/EventType'
+        last_event_time_ms:
+          type: integer
+          title: Last Event Time Ms
+        last_event_day:
+          type: string
+          title: Last Event Day
+        last_event_hour:
+          type: integer
+          maximum: 23.0
+          minimum: 0.0
+          title: Last Event Hour
+        last_event_minute_bucket_ms:
+          type: integer
+          title: Last Event Minute Bucket Ms
+        trip_partition:
+          type: integer
+          maximum: 15.0
+          minimum: 0.0
+          title: Trip Partition
+        fare_amount:
+          type: number
+          title: Fare Amount
+        distance_km:
+          type: number
+          title: Distance Km
+        eta_seconds:
+          type: integer
+          title: Eta Seconds
+        surge_multiplier:
+          type: number
+          title: Surge Multiplier
+        event_version:
+          type: integer
+          minimum: 1.0
+          title: Event Version
+        is_deleted:
+          type: boolean
+          title: Is Deleted
+          default: false
+        attributes:
+          type: object
+          title: Attributes
+      additionalProperties: false
+      type: object
+      required:
+      - trip_id
+      - merchant_id
+      - merchant_name
+      - driver_id
+      - rider_id
+      - city
+      - service_tier
+      - status
+      - payment_method
+      - last_event_type
+      - last_event_time_ms
+      - last_event_day
+      - last_event_hour
+      - last_event_minute_bucket_ms
+      - trip_partition
+      - fare_amount
+      - distance_km
+      - eta_seconds
+      - surge_multiplier
+      - event_version
+      title: TripState
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError

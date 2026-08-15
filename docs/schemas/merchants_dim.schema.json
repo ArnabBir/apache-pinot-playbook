@@ -1,0 +1,47 @@
+{
+  "schemaName": "merchants_dim",
+  "enableColumnBasedNullHandling": true,
+  "primaryKeyColumns": [
+    "merchant_id"
+  ],
+  "dimensionFieldSpecs": [
+    {
+      "name": "merchant_id",
+      "dataType": "STRING"
+    },
+    {
+      "name": "merchant_name",
+      "dataType": "STRING"
+    },
+    {
+      "name": "city",
+      "dataType": "STRING"
+    },
+    {
+      "name": "vertical",
+      "dataType": "STRING"
+    },
+    {
+      "name": "contract_tier",
+      "dataType": "STRING"
+    },
+    {
+      "name": "is_active",
+      "dataType": "BOOLEAN"
+    },
+    {
+      "name": "onboarding_date",
+      "dataType": "STRING"
+    }
+  ],
+  "metricFieldSpecs": [
+    {
+      "name": "rating",
+      "dataType": "DOUBLE"
+    },
+    {
+      "name": "monthly_orders",
+      "dataType": "INT"
+    }
+  ]
+}

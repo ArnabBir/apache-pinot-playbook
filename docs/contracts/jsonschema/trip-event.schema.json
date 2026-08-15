@@ -1,0 +1,189 @@
+{
+  "$defs": {
+    "City": {
+      "enum": [
+        "bengaluru",
+        "mumbai",
+        "delhi",
+        "hyderabad",
+        "pune",
+        "chennai"
+      ],
+      "title": "City",
+      "type": "string"
+    },
+    "EventType": {
+      "enum": [
+        "created",
+        "accepted",
+        "en_route",
+        "picked_up",
+        "completed",
+        "cancelled",
+        "deleted"
+      ],
+      "title": "EventType",
+      "type": "string"
+    },
+    "PaymentMethod": {
+      "enum": [
+        "card",
+        "wallet",
+        "cash",
+        "upi"
+      ],
+      "title": "PaymentMethod",
+      "type": "string"
+    },
+    "ServiceTier": {
+      "enum": [
+        "economy",
+        "premium",
+        "xl"
+      ],
+      "title": "ServiceTier",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "trip_id": {
+      "description": "Primary entity identifier for a delivery trip",
+      "title": "Trip Id",
+      "type": "string"
+    },
+    "merchant_id": {
+      "title": "Merchant Id",
+      "type": "string"
+    },
+    "merchant_name": {
+      "title": "Merchant Name",
+      "type": "string"
+    },
+    "driver_id": {
+      "title": "Driver Id",
+      "type": "string"
+    },
+    "rider_id": {
+      "title": "Rider Id",
+      "type": "string"
+    },
+    "city": {
+      "$ref": "#/$defs/City"
+    },
+    "service_tier": {
+      "$ref": "#/$defs/ServiceTier"
+    },
+    "event_type": {
+      "$ref": "#/$defs/EventType"
+    },
+    "status": {
+      "title": "Status",
+      "type": "string"
+    },
+    "payment_method": {
+      "$ref": "#/$defs/PaymentMethod"
+    },
+    "event_time_ms": {
+      "description": "Event time in epoch milliseconds",
+      "title": "Event Time Ms",
+      "type": "integer"
+    },
+    "event_day": {
+      "description": "yyyy-mm-dd, pre-computed for low-latency filtering",
+      "title": "Event Day",
+      "type": "string"
+    },
+    "event_hour": {
+      "maximum": 23,
+      "minimum": 0,
+      "title": "Event Hour",
+      "type": "integer"
+    },
+    "event_minute_bucket_ms": {
+      "description": "Epoch milliseconds truncated to a 5-minute bucket",
+      "title": "Event Minute Bucket Ms",
+      "type": "integer"
+    },
+    "trip_partition": {
+      "maximum": 15,
+      "minimum": 0,
+      "title": "Trip Partition",
+      "type": "integer"
+    },
+    "pickup_zone": {
+      "title": "Pickup Zone",
+      "type": "string"
+    },
+    "dropoff_zone": {
+      "title": "Dropoff Zone",
+      "type": "string"
+    },
+    "pickup_h3": {
+      "title": "Pickup H3",
+      "type": "string"
+    },
+    "dropoff_h3": {
+      "title": "Dropoff H3",
+      "type": "string"
+    },
+    "fare_amount": {
+      "title": "Fare Amount",
+      "type": "number"
+    },
+    "distance_km": {
+      "title": "Distance Km",
+      "type": "number"
+    },
+    "eta_seconds": {
+      "title": "Eta Seconds",
+      "type": "integer"
+    },
+    "surge_multiplier": {
+      "title": "Surge Multiplier",
+      "type": "number"
+    },
+    "event_version": {
+      "minimum": 1,
+      "title": "Event Version",
+      "type": "integer"
+    },
+    "is_deleted": {
+      "default": false,
+      "title": "Is Deleted",
+      "type": "boolean"
+    },
+    "attributes": {
+      "title": "Attributes",
+      "type": "object"
+    }
+  },
+  "required": [
+    "trip_id",
+    "merchant_id",
+    "merchant_name",
+    "driver_id",
+    "rider_id",
+    "city",
+    "service_tier",
+    "event_type",
+    "status",
+    "payment_method",
+    "event_time_ms",
+    "event_day",
+    "event_hour",
+    "event_minute_bucket_ms",
+    "trip_partition",
+    "pickup_zone",
+    "dropoff_zone",
+    "pickup_h3",
+    "dropoff_h3",
+    "fare_amount",
+    "distance_km",
+    "eta_seconds",
+    "surge_multiplier",
+    "event_version"
+  ],
+  "title": "TripEvent",
+  "type": "object"
+}

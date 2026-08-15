@@ -1,0 +1,14 @@
+sequenceDiagram
+  participant Client
+  participant Broker
+  participant ServerA
+  participant ServerB
+
+  Client->>Broker: SQL / query options
+  Broker->>Broker: parse, route, prune segments
+  Broker->>ServerA: scatter sub-query
+  Broker->>ServerB: scatter sub-query
+  ServerA-->>Broker: partial result
+  ServerB-->>Broker: partial result
+  Broker->>Broker: reduce / merge / order / limit
+  Broker-->>Client: BrokerResponse

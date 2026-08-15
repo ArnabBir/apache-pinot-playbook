@@ -1,0 +1,8 @@
+stateDiagram-v2
+  [*] --> Consuming
+  Consuming --> Committing: flush threshold reached
+  Committing --> Online: segment built and metadata published
+  Online --> Reloading: index / schema change
+  Reloading --> Online
+  Online --> Replaced: backfill or consistent push
+  Replaced --> [*]

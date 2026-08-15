@@ -1,0 +1,136 @@
+site_name: Apache Pinot Playbook
+site_description: A practical, production-minded guide to real-time analytics with Apache Pinot.
+site_url: https://arnabbir.github.io/apache-pinot-playbook/
+repo_name: ArnabBir/apache-pinot-playbook
+repo_url: https://github.com/ArnabBir/apache-pinot-playbook
+edit_uri: edit/main/docs/
+use_directory_urls: false
+
+validation:
+  nav:
+    omitted_files: ignore
+  links:
+    not_found: ignore
+    unrecognized_links: ignore
+
+theme:
+  name: material
+  language: en
+  logo: images/Pinot-architecture.svg
+  favicon: images/Pinot-architecture.svg
+  palette:
+    scheme: pinot-light
+    primary: black
+    accent: deep purple
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - content.code.copy
+    - content.code.select
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+    - toc.follow
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/ArnabBir/apache-pinot-playbook
+      name: View the source on GitHub
+
+extra_css:
+  - stylesheets/extra.css
+extra_javascript:
+  - javascripts/mermaid.js
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+nav:
+  - Home: index.md
+  - Start Here:
+      - Overview: overview.md
+      - Preface: 00-preface.md
+      - Pinot at a Glance: 01-apache-pinot-at-a-glance.md
+      - Architecture: 02-architecture-and-components.md
+      - Storage Model: 03-storage-model-segments-tenants-clusters.md
+  - Design & Ingest:
+      - Schema Design: 04-schema-design-and-data-modeling.md
+      - Table Config: 05-table-config-deep-dive.md
+      - Indexing Cookbook: 06-indexing-cookbook.md
+      - Batch Ingestion: 07-batch-ingestion.md
+      - Stream Ingestion: 08-stream-ingestion.md
+      - Upsert, Dedup & CDC: 09-upsert-dedup-cdc.md
+  - Query & Integrate:
+      - Pinot SQL: 10-querying-v1-and-sql.md
+      - Multi-Stage Engine: 11-multi-stage-engine-v2.md
+      - Time Series Engine: 12-time-series-engine.md
+      - APIs & Contracts: 13-apis-clients-and-contracts.md
+      - Deployment: 14-deployment-docker-kubernetes-cloud.md
+      - Security & Governance: 15-security-and-governance.md
+  - Operate & Scale:
+      - Routing & Rebalancing: 16-routing-partitioning-rebalancing.md
+      - Performance Engineering: 17-performance-engineering.md
+      - Observability & Minions: 18-observability-operations-and-minions.md
+      - Failure Modes: 19-failure-modes-and-troubleshooting.md
+  - Practice:
+      - Patterns & Decisions: 20-patterns-antipatterns-and-decision-framework.md
+      - Rides Platform Capstone: 21-capstone-building-a-rides-platform.md
+      - Exercises: 22-exercises.md
+      - Solution Key: 23-solution-key.md
+      - Glossary: 24-glossary.md
+      - References: 99-references.md
+  - Labs:
+      - Lab Guide: labs/index.md
+      - "01: Local Cluster": labs/lab-01-local-cluster.md
+      - "02: Schemas & Tables": labs/lab-02-schemas-and-tables.md
+      - "03: Stream Ingestion": labs/lab-03-stream-ingestion.md
+      - "04: Index Tuning": labs/lab-04-index-tuning.md
+      - "05: Upsert & CDC": labs/lab-05-upsert-cdc.md
+      - "06: Multi-Stage Queries": labs/lab-06-multi-stage-queries.md
+      - "07: Time Series": labs/lab-07-time-series.md
+      - "08: SLO & Incident Drill": labs/lab-08-slo-incident.md
+      - "09: Hybrid Tables": labs/lab-09-hybrid-tables.md
+      - "10: Schema Evolution": labs/lab-10-schema-evolution.md
+      - "11: Minion Tasks": labs/lab-11-minion-tasks.md
+      - "12: SQL Optimization": labs/lab-12-sql-optimization.md
+      - "13: Chaos Engineering": labs/lab-13-chaos-engineering.md
+      - "14: Fraud Detection": labs/lab-14-fraud-detection.md
+      - "15: Multi-Tenancy": labs/lab-15-multi-tenancy.md
+      - "16: Star-Tree Design": labs/lab-16-star-tree-workshop.md
+      - "17: Grafana Integration": labs/lab-17-grafana-integration.md
+      - "18: Multi-Value Columns": labs/lab-18-multi-value-columns.md
+      - "19: JSON & Text Index": labs/lab-19-json-text-index.md
+      - "20: Ingestion Methods": labs/lab-20-ingestion-methods.md
+      - "21: Storage Tiers": labs/lab-21-storage-tiers.md
+
+copyright: Copyright &copy; 2026 Apache Pinot Playbook contributors

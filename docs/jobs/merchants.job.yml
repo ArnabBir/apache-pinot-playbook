@@ -1,0 +1,35 @@
+executionFrameworkSpec:
+  name: standalone
+
+jobType: SegmentCreationAndTarPush
+
+inputDirURI: file:///workspace/data
+includeFileNamePattern: glob:**/merchants.csv
+outputDirURI: file:///workspace/.generated/segments/merchants_dim
+overwriteOutput: true
+
+pinotFSSpecs:
+  - scheme: file
+    className: org.apache.pinot.spi.filesystem.LocalPinotFS
+
+recordReaderSpec:
+  dataFormat: csv
+  className: org.apache.pinot.plugin.inputformat.csv.CSVRecordReader
+  configClassName: org.apache.pinot.plugin.inputformat.csv.CSVRecordReaderConfig
+
+schemaURI: file:///workspace/schemas/merchants_dim.schema.json
+tableConfigURI: file:///workspace/tables/merchants_dim_offline.table.json
+
+tableSpec:
+  tableName: merchants_dim
+
+segmentNameGeneratorSpec:
+  type: normalizedDate
+
+pinotClusterSpecs:
+  - controllerURI: http://pinot-controller:9000
+
+pushJobSpec:
+  pushAttempts: 2
+  pushParallelism: 1
+  pushRetryIntervalMillis: 1000

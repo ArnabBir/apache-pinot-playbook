@@ -1,0 +1,28 @@
+flowchart LR
+  subgraph ingest[Ingestion Layer]
+    kafka[(Kafka Topics)]
+    files[(Batch Files / Deep Store)]
+  end
+  subgraph control[Control Plane]
+    zk[(ZooKeeper)]
+    controller[Pinot Controller]
+    minion[Pinot Minion]
+  end
+  subgraph query[Query Plane]
+    broker[Pinot Broker]
+    server1[Pinot Server A]
+    server2[Pinot Server B]
+  end
+  client[Apps / BI / APIs]
+
+  kafka --> server1
+  kafka --> server2
+  files --> controller
+  controller --> minion
+  controller <--> zk
+  broker <--> zk
+  server1 <--> zk
+  server2 <--> zk
+  broker --> server1
+  broker --> server2
+  client --> broker

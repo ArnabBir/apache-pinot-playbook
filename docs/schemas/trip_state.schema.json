@@ -1,0 +1,103 @@
+{
+  "schemaName": "trip_state",
+  "enableColumnBasedNullHandling": true,
+  "primaryKeyColumns": [
+    "trip_id"
+  ],
+  "dimensionFieldSpecs": [
+    {
+      "name": "trip_id",
+      "dataType": "STRING"
+    },
+    {
+      "name": "merchant_id",
+      "dataType": "STRING"
+    },
+    {
+      "name": "merchant_name",
+      "dataType": "STRING"
+    },
+    {
+      "name": "driver_id",
+      "dataType": "STRING"
+    },
+    {
+      "name": "rider_id",
+      "dataType": "STRING"
+    },
+    {
+      "name": "city",
+      "dataType": "STRING"
+    },
+    {
+      "name": "service_tier",
+      "dataType": "STRING"
+    },
+    {
+      "name": "status",
+      "dataType": "STRING"
+    },
+    {
+      "name": "payment_method",
+      "dataType": "STRING"
+    },
+    {
+      "name": "last_event_type",
+      "dataType": "STRING"
+    },
+    {
+      "name": "last_event_day",
+      "dataType": "STRING"
+    },
+    {
+      "name": "last_event_hour",
+      "dataType": "INT"
+    },
+    {
+      "name": "last_event_minute_bucket_ms",
+      "dataType": "LONG"
+    },
+    {
+      "name": "trip_partition",
+      "dataType": "INT"
+    },
+    {
+      "name": "event_version",
+      "dataType": "INT"
+    },
+    {
+      "name": "is_deleted",
+      "dataType": "BOOLEAN"
+    },
+    {
+      "name": "attributes",
+      "dataType": "STRING"
+    }
+  ],
+  "metricFieldSpecs": [
+    {
+      "name": "fare_amount",
+      "dataType": "DOUBLE"
+    },
+    {
+      "name": "distance_km",
+      "dataType": "DOUBLE"
+    },
+    {
+      "name": "eta_seconds",
+      "dataType": "INT"
+    },
+    {
+      "name": "surge_multiplier",
+      "dataType": "DOUBLE"
+    }
+  ],
+  "dateTimeFieldSpecs": [
+    {
+      "name": "last_event_time_ms",
+      "dataType": "LONG",
+      "format": "1:MILLISECONDS:EPOCH",
+      "granularity": "1:MILLISECONDS"
+    }
+  ]
+}
