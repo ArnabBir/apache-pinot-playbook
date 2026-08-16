@@ -1,5 +1,7 @@
 # Apache Pinot Playbook
 
+> **Read the hosted playbook:** https://arnabbir.github.io/apache-pinot-playbook/
+
 <p align="center">
   <img src="docs/images/Pinot-architecture.svg" alt="Apache Pinot High-Level Architecture" width="820"/>
 </p>
